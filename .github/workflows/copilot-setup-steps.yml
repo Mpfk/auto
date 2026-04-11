@@ -1,0 +1,16 @@
+name: "Copilot Setup Steps"
+
+# Runs automatically when this file changes on the default branch (for validation).
+# Also runnable manually from the Actions tab.
+on:
+  workflow_dispatch:
+  push:
+    branches:
+      - main
+    paths:
+      - .github/workflows/copilot-setup-steps.yml
+  pull_request:
+    paths:
+      - .github/workflows/copilot-setup-steps.yml
+
+# TODO: Add jobs section
