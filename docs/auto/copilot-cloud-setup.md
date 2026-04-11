@@ -1,6 +1,6 @@
 # Using Auto with GitHub Copilot Cloud Agent
 
-When running this workflow via the GitHub Copilot cloud agent (GitHub Agents on the web), two one-time setup steps are required before the agents can create issues, manage branches, and write pull requests.
+When running this workflow via the GitHub Copilot cloud agent (GitHub Agents on the web), three one-time setup steps are required before the agents can create issues, manage branches, and write pull requests.
 
 ## Why This Is Needed
 
@@ -39,30 +39,21 @@ The `copilot-setup-steps.yml` workflow tells the cloud agent what tooling to ins
 
 The `gh` CLI automatically reads `GH_TOKEN` from the environment — no `gh auth login` step is needed anywhere in the agent code.
 
-## Step 4 — Merge `copilot-setup-steps.yml` to `main`
+## (Optional) Customise for Your Language
 
-The Copilot cloud agent only reads `.github/workflows/copilot-setup-steps.yml` from the **default branch** (`main`). It ignores the file on feature branches.
+`.github/workflows/copilot-setup-steps.yml` ships with the template and is already on `main` — no action needed for the default setup.
 
-After cloning this template:
+If your project requires specific language tooling (Node.js, Python, etc.), open the file, uncomment the example block matching your stack, and push the change to `main`. Any tools installed here are available in all subsequent agent sessions.
 
-1. Customise `.github/workflows/copilot-setup-steps.yml` for your project's language tooling (follow the commented examples in the file)
-2. Merge the file to `main` via a pull request or direct commit before running the cloud agent for the first time
+> The Copilot cloud agent only reads this file from the default branch (`main`). Changes on feature branches are ignored.
 
-## Step 5 — Validate the Setup
+## Troubleshooting
 
-You can verify the setup file is syntactically correct and the environment is wired up by running the workflow manually:
+If agents fail with permission errors, verify:
+- The `copilot` Actions environment exists under **Settings → Environments**
+- `GH_TOKEN` is set as an environment secret inside it
 
-1. Go to **Actions → Copilot Setup Steps**
-2. Click **Run workflow → Run workflow**
-3. Confirm it completes without errors
-
-If the job fails with a permissions error, double-check that the `copilot` environment exists and the `GH_TOKEN` secret is set.
-
-## Customising for Your Language
-
-Open `.github/workflows/copilot-setup-steps.yml` and uncomment the example block matching your stack, or add your own steps. The file ships with examples for Node.js and Python.
-
-Any tools installed during setup steps are available in all subsequent agent sessions — no need to reinstall them per-session.
+To confirm the setup file itself is valid, run it manually: **Actions → Copilot Setup Steps → Run workflow**. It should complete without errors.
 
 ## Native Automation Workflows
 
