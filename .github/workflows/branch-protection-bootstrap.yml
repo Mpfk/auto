@@ -4,27 +4,16 @@ on:
   workflow_dispatch:
 
 permissions:
-  contents: read
+  administration: write
 
 jobs:
   apply:
     runs-on: ubuntu-latest
-    env:
-      ADMIN_TOKEN: ${{ secrets.GH_ADMIN_TOKEN }}
     steps:
-      - name: Ensure admin token exists
-        run: |
-          if [ -z "$ADMIN_TOKEN" ]; then
-            echo "GH_ADMIN_TOKEN secret is required to apply branch protection."
-            exit 1
-          fi
-
       - name: Apply branch protection to main
         uses: actions/github-script@v7
-        env:
-          GH_TOKEN: ${{ secrets.GH_ADMIN_TOKEN }}
         with:
-          github-token: ${{ secrets.GH_ADMIN_TOKEN }}
+          github-token: ${{ secrets.GITHUB_TOKEN }}
           script: |
             const owner = context.repo.owner;
             const repo = context.repo.repo;

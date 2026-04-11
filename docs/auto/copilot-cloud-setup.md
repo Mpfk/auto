@@ -76,6 +76,6 @@ These workflows are event-driven and run in standard GitHub Actions. They comple
 
 For repository guardrails:
 
-- Run `Label Sync` once to seed status/type labels.
-- Run `Branch Protection Bootstrap` once to require policy + test checks on `main`.
-- Add repository secret `GH_ADMIN_TOKEN` (repo admin permissions) before running `Branch Protection Bootstrap`.
+- The `Repo Setup` workflow runs automatically on every push to `main`.
+- It syncs labels and applies branch protection using `GITHUB_TOKEN` — no additional secrets required.
+- To trigger manually: GitHub Actions → `Repo Setup` → `Run workflow`.
