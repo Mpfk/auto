@@ -12,7 +12,23 @@ This project uses a multi-agent software development workflow. Read `docs/auto/a
 
 ## How to Run the Workflow
 
-The **main conversation** (you + the user) coordinates the workflow. Agents are short-lived workers for specific phases — no single agent runs the entire lifecycle.
+The workflow supports two execution modes:
+
+1. Chat-orchestrated mode (main conversation drives each phase)
+2. GitHub-native mode (issue labels, assignees, and PR events drive transitions)
+
+Agents are short-lived workers for specific phases. No single agent runs the entire lifecycle.
+
+### GitHub-Native Triggers
+
+Use these event-driven transitions when users operate directly from GitHub:
+
+1. Issue created with `status/draft` -> Issue agent performs intake, research, and planning.
+2. Plan approved -> issue moved to `status/ready`.
+3. Issue assigned to Copilot while `status/ready` -> implementation starts on `issue/{number}`.
+4. PR opened from `issue/{number}` -> issue moved to `status/in-progress`.
+5. Checks pass and PR is ready -> issue moved to `status/review` and Review agent is invoked.
+6. PR merged -> issue moved to `status/done` and closed.
 
 ### Phase 1: Init
 Invoke the **orchestrator** agent. It creates the GitHub Issue, checks for duplicates, and creates the feature branch. Returns when the issue is in `status/draft`.
@@ -65,10 +81,11 @@ If a TDD task requires multiple components, invoke **multiple tdd agents** rathe
 
 ## Agents
 
-Five specialist agents in `.github/agents/`:
+Six specialist agents in `.github/agents/`:
 
 | Agent | Purpose | Invoked by |
 |-------|---------|------------|
+| `issue` | GitHub-native intake and planning. Runs duplicate checks, research fan-out, and writes plan + acceptance criteria for Gate 1. | Main conversation or GitHub Agent |
 | `orchestrator` | Creates GitHub Issues, runs research, synthesizes findings, writes plans. Handles init through Gate 1. | Main conversation |
 | `research` | Investigates one angle of a problem (codebase, docs, external, constraints). Multiple run in parallel. | Orchestrator or main conversation |
 | `tdd` | Implements one component via Red-Green-Refactor. | Main conversation |

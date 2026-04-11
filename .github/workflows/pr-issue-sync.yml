@@ -1,0 +1,60 @@
+name: PR Issue Sync
+
+on:
+  pull_request:
+    types: [opened, reopened, synchronize, ready_for_review, closed]
+
+permissions:
+  issues: write
+  pull-requests: read
+
+jobs:
+  sync:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Sync issue status from PR lifecycle
+        uses: actions/github-script@v7
+        with:
+          script: |
+            const owner = context.repo.owner;
+            const repo = context.repo.repo;
+            const pr = context.payload.pull_request;
+            const action = context.payload.action;
+
+            const branch = pr.head.ref;
+            const match = /^issue\/(\d+)$/.exec(branch);
+            if (!match) return;
+
+            const issue_number = Number(match[1]);
+
+            const setStatus = async (next) => {
+              const issue = (await github.rest.issues.get({ owner, repo, issue_number })).data;
+              const statuses = (issue.labels || []).map((l) => l.name).filter((n) => n.startsWith('status/'));
+              for (const status of statuses) {
+                if (status !== next) {
+                  await github.rest.issues.removeLabel({ owner, repo, issue_number, name: status }).catch(() => {});
+                }
+              }
+              await github.rest.issues.addLabels({ owner, repo, issue_number, labels: [next] });
+            };
+
+            if (["opened", "reopened", "synchronize"].includes(action)) {
+              await setStatus('status/in-progress');
+              return;
+            }
+
+            if (action === 'ready_for_review') {
+              await setStatus('status/review');
+              await github.rest.issues.createComment({
+                owner,
+                repo,
+                issue_number,
+                body: 'PR is ready for review. Invoke the review agent and complete Gate 2 before merge.',
+              });
+              return;
+            }
+
+            if (action === 'closed' && pr.merged) {
+              await setStatus('status/done');
+              await github.rest.issues.update({ owner, repo, issue_number, state: 'closed' });
+            }

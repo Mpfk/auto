@@ -1,0 +1,53 @@
+name: Workflow Policy
+
+on:
+  pull_request:
+    branches: [main]
+
+permissions:
+  issues: read
+  pull-requests: read
+
+jobs:
+  policy:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Validate branch and linked issue policy
+        uses: actions/github-script@v7
+        with:
+          script: |
+            const owner = context.repo.owner;
+            const repo = context.repo.repo;
+            const pr = context.payload.pull_request;
+
+            const branch = pr.head.ref;
+            const match = /^issue\/(\d+)$/.exec(branch);
+            if (!match) {
+              core.setFailed(`PR branch must follow issue/{number}. Got: ${branch}`);
+              return;
+            }
+
+            const issueNumber = Number(match[1]);
+            let issue;
+            try {
+              issue = (await github.rest.issues.get({ owner, repo, issue_number: issueNumber })).data;
+            } catch {
+              core.setFailed(`No matching issue found for branch ${branch}.`);
+              return;
+            }
+
+            const labels = (issue.labels || []).map((l) => l.name);
+            const blocked = labels.includes('status/blocked');
+            const cancelled = labels.includes('status/cancelled');
+            if (blocked || cancelled) {
+              core.setFailed(`Issue #${issueNumber} is ${blocked ? 'blocked' : 'cancelled'}.`);
+              return;
+            }
+
+            const body = `${pr.title}\n\n${pr.body || ''}`;
+            if (!body.includes(`Closes #${issueNumber}`)) {
+              core.setFailed(`PR must include 'Closes #${issueNumber}' in title or body.`);
+              return;
+            }
+
+            core.info(`Workflow policy checks passed for issue #${issueNumber}.`);

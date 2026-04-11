@@ -1,0 +1,46 @@
+labels:
+  - name: status/draft
+    color: "A0AEC0"
+    description: Issue created, intake pending.
+  - name: status/researching
+    color: "3182CE"
+    description: Research agents are gathering findings.
+  - name: status/planning
+    color: "2B6CB0"
+    description: Plan and acceptance criteria are being drafted.
+  - name: status/ready
+    color: "38A169"
+    description: Plan approved and ready for implementation.
+  - name: status/in-progress
+    color: "D69E2E"
+    description: Implementation work is active.
+  - name: status/review
+    color: "805AD5"
+    description: Awaiting review and Gate 2 approval.
+  - name: status/done
+    color: "2F855A"
+    description: Merged and complete.
+  - name: status/blocked
+    color: "C53030"
+    description: Blocked pending external input or dependency.
+  - name: status/cancelled
+    color: "718096"
+    description: Closed without implementation.
+  - name: feature
+    color: "0E8A16"
+    description: New functionality.
+  - name: bug
+    color: "D73A4A"
+    description: Defect fix.
+  - name: refactor
+    color: "5319E7"
+    description: Internal structure improvement without behavior change.
+  - name: docs
+    color: "1D76DB"
+    description: Documentation updates.
+  - name: test
+    color: "FBCA04"
+    description: Test coverage or test infrastructure work.
+  - name: chore
+    color: "BFD4F2"
+    description: Maintenance or project hygiene.

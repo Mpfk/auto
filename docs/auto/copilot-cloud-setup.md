@@ -63,3 +63,19 @@ If the job fails with a permissions error, double-check that the `copilot` envir
 Open `.github/workflows/copilot-setup-steps.yml` and uncomment the example block matching your stack, or add your own steps. The file ships with examples for Node.js and Python.
 
 Any tools installed during setup steps are available in all subsequent agent sessions — no need to reinstall them per-session.
+
+## Native Automation Workflows
+
+This template now includes GitHub-native automation workflows:
+
+- `.github/workflows/issue-state-guard.yml` normalizes and validates status labels.
+- `.github/workflows/issue-native-automation.yml` reacts to issue labels, assignment, and slash commands.
+- `.github/workflows/pr-issue-sync.yml` syncs issue status from PR lifecycle events.
+
+These workflows are event-driven and run in standard GitHub Actions. They complement, not replace, Copilot cloud setup steps.
+
+For repository guardrails:
+
+- Run `Label Sync` once to seed status/type labels.
+- Run `Branch Protection Bootstrap` once to require policy + test checks on `main`.
+- Add repository secret `GH_ADMIN_TOKEN` (repo admin permissions) before running `Branch Protection Bootstrap`.

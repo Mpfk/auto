@@ -1,0 +1,74 @@
+name: Issue State Guard
+
+on:
+  issues:
+    types: [opened, reopened, edited, labeled, unlabeled]
+
+permissions:
+  issues: write
+
+jobs:
+  guard:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Normalize and validate status labels
+        uses: actions/github-script@v7
+        with:
+          script: |
+            const issue = context.payload.issue;
+            const owner = context.repo.owner;
+            const repo = context.repo.repo;
+
+            const statuses = (issue.labels || [])
+              .map((l) => l.name)
+              .filter((n) => n.startsWith("status/"));
+
+            // Ensure exactly one status label while issue is open.
+            if (issue.state === "open" && statuses.length === 0) {
+              await github.rest.issues.addLabels({
+                owner,
+                repo,
+                issue_number: issue.number,
+                labels: ["status/draft"],
+              });
+              await github.rest.issues.createComment({
+                owner,
+                repo,
+                issue_number: issue.number,
+                body: "Added missing status label: status/draft.",
+              });
+              return;
+            }
+
+            if (statuses.length > 1) {
+              // Prefer the currently added status label if this event is label addition.
+              const added = context.payload.label?.name;
+              const keep = added && added.startsWith("status/") ? added : statuses[statuses.length - 1];
+              for (const label of statuses) {
+                if (label === keep) continue;
+                await github.rest.issues.removeLabel({
+                  owner,
+                  repo,
+                  issue_number: issue.number,
+                  name: label,
+                }).catch(() => {});
+              }
+              await github.rest.issues.createComment({
+                owner,
+                repo,
+                issue_number: issue.number,
+                body: `Normalized status labels. Keeping ${keep}.`,
+              });
+            }
+
+            // Closed issues should end in done/cancelled.
+            const ending = ["status/done", "status/cancelled"];
+            const active = statuses[statuses.length - 1] || null;
+            if (issue.state === "closed" && active && !ending.includes(active)) {
+              await github.rest.issues.createComment({
+                owner,
+                repo,
+                issue_number: issue.number,
+                body: "Issue is closed without a terminal status label (expected status/done or status/cancelled).",
+              });
+            }
