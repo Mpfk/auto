@@ -11,7 +11,7 @@ This checklist verifies that the Orchestrator agent correctly detects project ty
   - [ ] `workflow.conf` updated with `TEST_CMD="npm test"`
   - [ ] Git commit made with message `chore(config): auto-detect test runner as npm test` 
   - [ ] Orchestrator reports what was detected to user
-- **Status:** ❌ FAIL - Feature not yet implemented
+- **Status:** ✅ READY FOR TESTING - Feature implemented in Phase A step 4
 
 ### ✓ Scenario 2: Fresh clone with pyproject.toml  
 - **Setup:** Clone with `pyproject.toml` and `workflow.conf` containing `TEST_CMD=""`
@@ -20,7 +20,7 @@ This checklist verifies that the Orchestrator agent correctly detects project ty
   - [ ] `workflow.conf` updated with `TEST_CMD="pytest"`
   - [ ] Git commit made with message `chore(config): auto-detect test runner as pytest`
   - [ ] Orchestrator reports detection to user
-- **Status:** ❌ FAIL - Feature not yet implemented
+- **Status:** ✅ READY FOR TESTING - Feature implemented in Phase A step 4
 
 ### ✓ Scenario 3: Fresh clone with multiple markers
 - **Setup:** Clone with both `package.json` and `pyproject.toml`, `workflow.conf` has `TEST_CMD=""`
@@ -30,7 +30,7 @@ This checklist verifies that the Orchestrator agent correctly detects project ty
   - [ ] User asked to set `TEST_CMD` manually in workflow.conf
   - [ ] No changes made to workflow.conf
   - [ ] No git commits for config changes
-- **Status:** ❌ FAIL - Feature not yet implemented
+- **Status:** ✅ READY FOR TESTING - Feature implemented in Phase A step 4
 
 ### ✓ Scenario 4: Fresh clone with no markers
 - **Setup:** Clone with no project marker files, `workflow.conf` has `TEST_CMD=""`
@@ -40,7 +40,7 @@ This checklist verifies that the Orchestrator agent correctly detects project ty
   - [ ] Message noting workflow.conf will be configured during scaffolding
   - [ ] workflow.conf remains unchanged
   - [ ] Phase A continues to next step
-- **Status:** ❌ FAIL - Feature not yet implemented
+- **Status:** ✅ READY FOR TESTING - Feature implemented in Phase A step 4
 
 ### ✓ Scenario 5: Clone where TEST_CMD already set
 - **Setup:** Clone with `workflow.conf` containing `TEST_CMD="make test"`  
@@ -50,7 +50,7 @@ This checklist verifies that the Orchestrator agent correctly detects project ty
   - [ ] workflow.conf remains unchanged 
   - [ ] No git commits for config changes
   - [ ] Phase A continues normally  
-- **Status:** ❌ FAIL - Feature not yet implemented
+- **Status:** ✅ READY FOR TESTING - Feature implemented in Phase A step 4
 
 ## Implementation Requirements
 
