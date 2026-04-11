@@ -5,9 +5,7 @@ A reusable project template that enforces structured software development throug
 ## Quick Start
 
 1. Clone this template into your new project
-2. Run `git config core.hooksPath .githooks`
-3. Edit `workflow.conf` to match your project's test runner and directory layout
-4. Start working by invoking the Orchestrator agent: `@orchestrator`
+2. Start working by invoking the Orchestrator agent in Copilot Chat: `@orchestrator`
 
 ## How It Works
 
@@ -51,23 +49,15 @@ See [`docs/auto/agent-flow.md`](docs/auto/agent-flow.md) for the complete workfl
 git clone <template-repo-url> my-new-project
 cd my-new-project
 
-# Configure git hooks
-git config core.hooksPath .githooks
-
-# Customize for your project
-# Edit workflow.conf — set your test command and directory layout
-# Edit README.md — replace this content with your project's overview
+# Invoke the Orchestrator to start your first issue
+# In VS Code Copilot Chat: @orchestrator
 ```
+
+For local development with git hook enforcement, run `git config core.hooksPath .githooks` once after cloning. This is not required for GitHub-native (cloud agent) mode.
 
 ### Configuration
 
-Edit `workflow.conf` to match your project:
-
-```bash
-TEST_CMD="pytest"           # Your test runner
-SRC_DIRS="src/ lib/"        # Where source code lives
-TEST_DIRS="tests/ test/"    # Where tests live
-```
+`workflow.conf` is auto-configured on first use. The Orchestrator detects your project's test runner from standard marker files (`package.json`, `pyproject.toml`, `go.mod`, `Cargo.toml`, etc.) and writes the detected value back to `workflow.conf`. You only need to edit it manually if auto-detection doesn't match your setup.
 
 ### Agents
 
