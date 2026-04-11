@@ -80,3 +80,6 @@ TEST_DIRS="tests/ test/"    # Where tests live
 ## Documentation
 
 All project documentation lives in `docs/`. This README provides only the overview and setup steps.
+
+- [`docs/auto/agent-flow.md`](docs/auto/agent-flow.md) — Complete workflow specification, state machine, and agent reference
+- [`docs/auto/copilot-cloud-setup.md`](docs/auto/copilot-cloud-setup.md) — Setup guide for GitHub Copilot cloud agent (GH_TOKEN, copilot environment, copilot-setup-steps.yml)
