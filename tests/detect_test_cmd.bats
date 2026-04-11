@@ -39,10 +39,9 @@ teardown() {
   # Reset workflow.conf to empty TEST_CMD
   sed -i '' 's/TEST_CMD=.*/TEST_CMD=""/' workflow.conf
   
-  # Run detection
-  run detect_test_cmd
+  # Run detection (direct call to persist exports)
+  detect_test_cmd
   
-  [ "$status" -eq 0 ]
   [ "$TEST_CMD" = "npm test" ]
   
   # Check that workflow.conf was updated
@@ -57,10 +56,9 @@ teardown() {
   # Reset workflow.conf to empty TEST_CMD
   sed -i '' 's/TEST_CMD=.*/TEST_CMD=""/' workflow.conf
   
-  # Run detection
-  run detect_test_cmd
+  # Run detection (direct call to persist exports)
+  detect_test_cmd
   
-  [ "$status" -eq 0 ]
   [ "$TEST_CMD" = "pytest" ]
   
   # Check that workflow.conf was updated
@@ -75,10 +73,9 @@ teardown() {
   # Reset workflow.conf to empty TEST_CMD
   sed -i '' 's/TEST_CMD=.*/TEST_CMD=""/' workflow.conf
   
-  # Run detection
-  run detect_test_cmd
+  # Run detection (direct call to persist exports)
+  detect_test_cmd
   
-  [ "$status" -eq 0 ]
   [ "$TEST_CMD" = "go test ./..." ]
   
   # Check that workflow.conf was updated
