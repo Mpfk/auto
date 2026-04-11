@@ -6,6 +6,7 @@ setup() {
   TEST_DIR=$(mktemp -d)
   cd "$TEST_DIR"
   git init --quiet
+  git commit --allow-empty -m "initial" --quiet
   
   # Create a mock workflow.conf with empty TEST_CMD
   cat > workflow.conf << 'EOF'
