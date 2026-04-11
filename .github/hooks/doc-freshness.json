@@ -1,0 +1,11 @@
+{
+  "hooks": {
+    "PostToolUse": [
+      {
+        "type": "command",
+        "command": ".github/hooks/scripts/doc-freshness.sh",
+        "timeout": 5
+      }
+    ]
+  }
+}

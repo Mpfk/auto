@@ -1,0 +1,14 @@
+#!/bin/bash
+# Dispatcher: runs all executable scripts in pre-commit.d/
+HOOK_DIR="$(cd "$(dirname "$0")" && pwd)/pre-commit.d"
+if [ -d "$HOOK_DIR" ]; then
+  for hook in "$HOOK_DIR"/*.sh; do
+    [ -x "$hook" ] || continue
+    "$hook"
+    status=$?
+    if [ $status -ne 0 ]; then
+      exit $status
+    fi
+  done
+fi
+exit 0

@@ -1,0 +1,13 @@
+#!/bin/bash
+# Reminds to update documentation after source file changes.
+REPO_ROOT="$(git rev-parse --show-toplevel)"
+source "$REPO_ROOT/workflow.conf"
+
+# Build grep pattern from SRC_DIRS
+src_pattern=$(echo "$SRC_DIRS" | tr ' ' '\n' | sed 's|/$||' | paste -sd'|' -)
+
+changed_src=$(git diff --name-only HEAD~1 2>/dev/null | grep -E "^($src_pattern)/" | head -5)
+if [ -n "$changed_src" ]; then
+  echo "REMINDER: Source files changed. Verify docs/ is up to date."
+  echo "Changed: $changed_src"
+fi
