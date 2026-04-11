@@ -102,9 +102,9 @@ All project documentation lives in `docs/`. This README provides only the overvi
 
 ## Repository Guardrails
 
-After first setup, run these GitHub Actions workflows once:
+Setup is automatic. The `Repo Setup` workflow runs on every push to `main` and:
 
-1. `Label Sync` — creates/updates default status and type labels from `.github/labels.yml`.
-2. `Branch Protection Bootstrap` — applies required checks to `main`.
+1. Creates/syncs all status and type labels from `.github/labels.yml`.
+2. Applies branch protection rules to `main` (required checks, PR reviews, no force-push).
 
-`Branch Protection Bootstrap` requires repository secret `GH_ADMIN_TOKEN` with permissions to edit branch protection settings.
+No secrets or manual steps are required. To re-run manually: GitHub Actions → `Repo Setup` → `Run workflow`.
