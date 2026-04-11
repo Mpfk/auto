@@ -112,19 +112,6 @@ For local development with git hook enforcement, run `git config core.hooksPath 
 | Documentation | Maintains `docs/` directory. |
 | Review | Pre-merge validation. Read-only. |
 
-### Native GitHub Mode
-
-You can run most of the workflow directly from GitHub Issues and Pull Requests:
-
-1. Open an issue with the workflow template.
-2. Run the Issue agent (GitHub Agent or Copilot chat) to generate research, plan, and acceptance criteria.
-3. Approve plan and move to `status/ready`.
-4. Assign Copilot to the issue to start implementation on `issue/{number}`.
-5. Open PR to `main`; CI and automation move status to `status/review` when ready.
-6. Review agent validates, then Gate 2 approval merges and closes the issue.
-
-See [`docs/auto/agent-flow.md`](docs/auto/agent-flow.md) for the event mapping and label transition rules.
-
 ## Documentation
 
 All project documentation lives in `docs/`. This README provides only the overview and setup steps.
