@@ -7,6 +7,48 @@ A reusable project template that enforces structured software development throug
 1. Clone this template into your new project
 2. Start working by invoking the Orchestrator agent in Copilot Chat: `@orchestrator`
 
+## How To Use
+
+Choose the path that matches how you're running the workflow:
+
+### Native GitHub Mode
+
+Use this path if you want to drive the workflow entirely from GitHub — no local IDE required.
+
+**Prerequisites**
+- GitHub Copilot plan with coding agent (assign-to-Copilot) access
+- One-time environment setup — see [`docs/auto/copilot-cloud-setup.md`](docs/auto/copilot-cloud-setup.md)
+
+**Steps**
+1. Create a GitHub Issue describing your feature or bug fix — the Issue Agent runs automatically when the `status/draft` label is applied
+2. Review the plan posted as an issue comment; request changes or approve it by applying the `status/ready` label
+3. Assign **Copilot** to the issue (GitHub web UI) — implementation starts on a `issue/{number}` branch
+4. When checks pass and the PR is ready, the Review Agent validates automatically; review the summary
+5. Approve the merge — the branch merges to `main` and the issue closes
+
+---
+
+### Developer Instance (VS Code)
+
+Use this path if you're working locally in VS Code with GitHub Copilot Chat.
+
+**Prerequisites**
+- VS Code with the [GitHub Copilot Chat](https://marketplace.visualstudio.com/items?itemName=GitHub.copilot-chat) extension
+- Repository cloned locally
+- Git hooks activated: run `git config core.hooksPath .githooks` once after cloning
+- GitHub CLI authenticated: `gh auth login`
+
+**Invoking agents**
+
+Open the Copilot Chat panel and type the agent name to start:
+
+| What you want | Command |
+|---|---|
+| Start new work (feature, fix, refactor) | `@orchestrator` |
+| Intake and plan an existing GitHub Issue | `@issue` |
+
+The agent drives the workflow — creating the issue, running research, writing a plan, and presenting it for your approval. You stay in control at two gates: plan approval and merge approval.
+
 ## How It Works
 
 The Orchestrator agent manages the full development lifecycle in chat-driven mode:
