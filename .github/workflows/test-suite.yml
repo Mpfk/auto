@@ -17,4 +17,9 @@ jobs:
 
       - name: Run test suite
         run: |
+          if [ ! -f package.json ] && [ ! -f pyproject.toml ] && [ ! -f Cargo.toml ] && [ ! -f go.mod ]; then
+            echo "⚠️  No project setup file found (package.json, pyproject.toml, Cargo.toml, go.mod). Skipping test suite."
+            echo "Update workflow.conf TEST_CMD once your project is scaffolded."
+            exit 0
+          fi
           eval "${{ steps.config.outputs.test_cmd }}"

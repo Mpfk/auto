@@ -20,7 +20,7 @@ jobs:
               echo "❌ Invalid: $msg"
               FAILED=1
             fi
-          done < <(git log origin/main..HEAD --pretty=format:'%s')
+          done < <(git log origin/main..HEAD --no-merges --pretty=format:'%s')
           if [ "$FAILED" -eq 1 ]; then
             echo ""
             echo "All commits must follow Conventional Commits: type(scope): description"

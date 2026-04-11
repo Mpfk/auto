@@ -3,6 +3,44 @@ name: Feature / Bug / Task
 description: Standard issue template for the multi-agent workflow
 labels: ["status/draft"]
 body:
+  - type: dropdown
+    id: work-type
+    attributes:
+      label: Work Type
+      description: Select the type that best matches this request.
+      options:
+        - feature
+        - bug
+        - refactor
+        - docs
+        - test
+        - chore
+    validations:
+      required: true
+
+  - type: dropdown
+    id: execution-mode
+    attributes:
+      label: Execution Mode
+      description: Choose how this issue should be driven.
+      options:
+        - github-native (labels, assignees, PR events)
+        - chat-orchestrated (manual orchestrator conversation)
+    validations:
+      required: true
+
+  - type: dropdown
+    id: risk-level
+    attributes:
+      label: Risk Level
+      description: Estimate implementation and rollout risk.
+      options:
+        - low
+        - medium
+        - high
+    validations:
+      required: true
+
   - type: textarea
     id: problem
     attributes:
@@ -15,6 +53,28 @@ body:
     attributes:
       label: Description
       description: Additional context and details.
+
+  - type: textarea
+    id: affected-areas
+    attributes:
+      label: Affected Areas
+      description: List directories, systems, or APIs that will likely change.
+      placeholder: |
+        - src/
+        - tests/
+        - docs/api/
+
+  - type: textarea
+    id: test-impact
+    attributes:
+      label: Test Impact
+      description: What tests should be added or updated?
+
+  - type: textarea
+    id: rollback
+    attributes:
+      label: Rollback Plan
+      description: How to safely revert if this change causes issues?
   - type: textarea
     id: research
     attributes:

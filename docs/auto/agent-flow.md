@@ -10,6 +10,26 @@ The **main conversation** (you + Copilot) coordinates the workflow. Agents are s
 
 The workflow follows a phase-based pipeline coordinated by the main conversation. Agents are invoked as workers for specific phases and return when done. Two approval gates require your explicit sign-off.
 
+## Execution Modes
+
+The workflow supports two execution modes:
+
+1. Chat-orchestrated mode (main conversation coordinates every phase).
+2. GitHub-native mode (Issue labels, assignees, and PR events trigger phase transitions).
+
+### GitHub-Native Event Flow
+
+When users operate directly in GitHub, use this event mapping:
+
+| Trigger | Automation | Result |
+|--------|------------|--------|
+| Issue created with `status/draft` | Issue agent intake and planning | Research and plan packet prepared for Gate 1 |
+| Plan approved | Status transition | Issue moves to `status/ready` |
+| Copilot assigned to `status/ready` issue | Implementation kickoff | Branch `issue/{number}` and TDD work starts |
+| PR opened from `issue/{number}` | Issue/PR sync | Issue moves to `status/in-progress` |
+| Checks green + PR ready | Review kickoff | Issue moves to `status/review` and Review agent runs |
+| PR merged | Completion sync | Issue moves to `status/done` and closes |
+
 ```mermaid
 flowchart TD
     A([You describe what you need]) --> B[Orchestrator: create GitHub Issue + branch]
@@ -245,7 +265,21 @@ Branches follow the naming convention `issue/{issue-number}` (e.g., `issue/42`).
 
 ## Agents
 
-Five specialist agents handle different parts of the workflow. Their definitions live in `.github/agents/`. The **main conversation** coordinates the workflow and invokes agents as workers for specific phases. No single agent runs the entire lifecycle.
+Six specialist agents handle different parts of the workflow. Their definitions live in `.github/agents/`. The **main conversation** coordinates the workflow and invokes agents as workers for specific phases. No single agent runs the entire lifecycle.
+
+### Issue Agent
+
+The Issue agent supports GitHub-native intake and planning when work starts from an issue instead of a local orchestrator session.
+
+**What it does:**
+- Validates issue structure and required fields.
+- Runs duplicate checks and parallel research fan-out.
+- Synthesizes findings into plan + acceptance criteria.
+- Prepares Gate 1 material in the issue thread.
+
+**What it does NOT do:** implementation, Gate 2, or merge.
+
+**Config:** `.github/agents/issue.agent.md` | Model: Claude Opus 4 | Tools: read, edit, search, execute, agent, web
 
 All agent prompts must be **fully self-contained** — the invoker provides exact issue numbers, branch names, acceptance criteria (verbatim), and file paths. Agents do not discover context from file references or placeholders. Each agent has a guard clause: if required context is missing, it stops and reports what's needed.
 
