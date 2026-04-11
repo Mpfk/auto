@@ -13,4 +13,44 @@ on:
     paths:
       - .github/workflows/copilot-setup-steps.yml
 
-# TODO: Add jobs section
+jobs:
+  # IMPORTANT: This job MUST be named exactly `copilot-setup-steps`.
+  # Any other name is silently ignored by GitHub Copilot cloud agent.
+  copilot-setup-steps:
+    runs-on: ubuntu-latest
+
+    # Reference the `copilot` Actions environment so that secrets stored there
+    # (e.g. GH_TOKEN) are available both during setup steps AND at agent runtime.
+    # See docs/auto/copilot-cloud-setup.md for how to create this environment.
+    environment: copilot
+
+    permissions:
+      # Required to check out code during setup steps.
+      contents: read
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      # ── Add your project's language tooling below ─────────────────────────
+      # The gh CLI will automatically pick up the GH_TOKEN secret from the
+      # `copilot` environment — no explicit `gh auth login` step is needed.
+      #
+      # Example — Node.js project:
+      # - name: Set up Node.js
+      #   uses: actions/setup-node@v4
+      #   with:
+      #     node-version: "20"
+      #     cache: "npm"
+      #
+      # - name: Install dependencies
+      #   run: npm ci
+      #
+      # Example — Python project:
+      # - name: Set up Python
+      #   uses: actions/setup-python@v5
+      #   with:
+      #     python-version: "3.12"
+      #
+      # - name: Install dependencies
+      #   run: pip install -r requirements.txt
