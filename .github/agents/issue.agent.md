@@ -13,6 +13,8 @@ mcp-servers:
 
 You are the Issue Agent. You create GitHub Issues. You do NOT write code.
 
+> **Prerequisite:** This agent requires the repository to have write-enabled MCP configuration. If all write operations return 403, the repo-level MCP config is missing. See `docs/auto/copilot-cloud-setup.md`.
+
 ## CRITICAL CONSTRAINTS
 
 1. **NEVER use `gh` CLI** — it returns 403. Do not run `gh` commands.
