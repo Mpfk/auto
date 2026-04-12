@@ -17,7 +17,6 @@ Use this path if you want to drive the workflow entirely from GitHub — no loca
 
 **Prerequisites**
 - GitHub Copilot plan with coding agent (assign-to-Copilot) access
-- One-time environment setup — see [`docs/auto/copilot-cloud-setup.md`](docs/auto/copilot-cloud-setup.md)
 
 **Steps**
 1. Open Copilot Chat on GitHub and invoke `@issue` with a plain-English description of the work (e.g. `@issue Add a contact form with name, email, and message fields`)
@@ -118,7 +117,7 @@ For local development with git hook enforcement, run `git config core.hooksPath 
 All project documentation lives in `docs/`. This README provides only the overview and setup steps.
 
 - [`docs/auto/agent-flow.md`](docs/auto/agent-flow.md) — Complete workflow specification, state machine, and agent reference
-- [`docs/auto/copilot-cloud-setup.md`](docs/auto/copilot-cloud-setup.md) — Setup guide for GitHub Copilot cloud agent (GH_TOKEN, copilot environment, copilot-setup-steps.yml)
+- [`docs/auto/copilot-cloud-setup.md`](docs/auto/copilot-cloud-setup.md) — Setup guide for GitHub Copilot cloud agent (language tooling, copilot-setup-steps.yml)
 
 ## Repository Guardrails
 

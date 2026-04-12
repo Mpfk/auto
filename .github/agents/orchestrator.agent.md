@@ -12,17 +12,6 @@ The main conversation (user + Copilot) coordinates the full workflow lifecycle. 
 
 When asked to initialize a new issue:
 
-**Pre-flight — before any other step:** Run `gh auth status` to verify GitHub access.
-- If it succeeds, continue.
-- If it fails, **stop immediately**. Do not proceed with research or planning. Report the failure and output the following manual commands for the user to run locally, then wait:
-  ```bash
-  # 1. Create the issue
-  gh issue create --title "<title>" --label "status/draft" --body "<structured body>"
-  # 2. Create the branch (replace N with the issue number printed above)
-  git checkout -b issue/N
-  ```
-  Ask the user to run these, share the issue number and branch name, then re-invoke this agent.
-
 1. Check existing GitHub Issues for duplicates: `gh issue list --state open --json number,title,body`
 2. Create a new GitHub Issue with structured body:
    ```bash
@@ -73,10 +62,6 @@ When asked to initialize a new issue:
 ## Phase B: Research + Plan
 
 When asked to research and plan (the issue already exists):
-
-**Pre-flight — before any other step:** Run `gh auth status` to verify GitHub access.
-- If it succeeds, continue.
-- If it fails, **stop immediately**. Do not proceed with research or planning. Report the failure and ask the user to run the workflow from a local environment where `gh` is authenticated, then re-invoke this agent.
 
 1. Update status label: `gh issue edit {number} --remove-label "status/draft" --add-label "status/researching"`
 2. Invoke Research Agents in parallel. Select relevant strategies:
