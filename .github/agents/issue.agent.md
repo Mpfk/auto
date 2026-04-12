@@ -27,11 +27,6 @@ Provide the issue number. The agent reads the current body and labels and picks 
 
 If the input is ambiguous, ask one clarifying question before proceeding.
 
-## Pre-flight
-
-Run `gh auth status` before anything else.
-- If it fails, stop. Report the error and ask the user to authenticate with `gh auth login`, then re-invoke.
-
 ## Process
 
 ### When starting from a prompt
