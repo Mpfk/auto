@@ -11,6 +11,9 @@ on:
 permissions:
   issues: write
 
+env:
+  FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: "true"
+
 jobs:
   sync:
     runs-on: ubuntu-latest
@@ -33,15 +36,19 @@ jobs:
             const config = yaml.load(fs.readFileSync('.github/labels.yml', 'utf8'));
             const labels = config.labels || [];
 
+            // Build a case-insensitive map of labels that already exist.
+            const existing = await github.paginate(github.rest.issues.listLabelsForRepo, { owner, repo, per_page: 100 });
+            const existingByLower = new Map(existing.map(l => [l.name.toLowerCase(), l.name]));
+
             for (const label of labels) {
               const name = label.name;
               const color = (label.color || 'ededed').replace('#', '');
               const description = label.description || '';
 
-              try {
-                await github.rest.issues.getLabel({ owner, repo, name });
-                await github.rest.issues.updateLabel({ owner, repo, name, new_name: name, color, description });
-              } catch {
+              const actualName = existingByLower.get(name.toLowerCase());
+              if (actualName) {
+                await github.rest.issues.updateLabel({ owner, repo, name: actualName, new_name: name, color, description });
+              } else {
                 await github.rest.issues.createLabel({ owner, repo, name, color, description });
               }
             }
