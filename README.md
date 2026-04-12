@@ -20,11 +20,11 @@ Use this path if you want to drive the workflow entirely from GitHub — no loca
 - One-time environment setup — see [`docs/auto/copilot-cloud-setup.md`](docs/auto/copilot-cloud-setup.md)
 
 **Steps**
-1. Create a GitHub Issue describing your feature or bug fix — the Issue Agent runs automatically when the `status/draft` label is applied
-2. Review the plan posted as an issue comment; request changes or approve it by applying the `status/ready` label
+1. Open Copilot Chat on GitHub and invoke `@issue` with a plain-English description of the work (e.g. `@issue Add a contact form with name, email, and message fields`)
+2. Review the plan the Issue Agent posts as an issue comment
 3. Assign **Copilot** to the issue (GitHub web UI) — implementation starts on a `issue/{number}` branch
 4. When checks pass and the PR is ready, the Review Agent validates automatically; review the summary
-5. Approve the merge — the branch merges to `main` and the issue closes
+5. Approve the merge — the branch merges to `main`, the issue closes, and the feature branch is deleted
 
 ---
 
@@ -44,8 +44,9 @@ Open the Copilot Chat panel and type the agent name to start:
 
 | What you want | Command |
 |---|---|
-| Start new work (feature, fix, refactor) | `@orchestrator` |
-| Intake and plan an existing GitHub Issue | `@issue` |
+| Start new work from a description | `@issue Add a contact form with name and email` |
+| Start new work with full orchestration | `@orchestrator` |
+| Re-plan an existing issue | `@issue 42` |
 
 The agent drives the workflow — creating the issue, running research, writing a plan, and presenting it for your approval. You stay in control at two gates: plan approval and merge approval.
 
