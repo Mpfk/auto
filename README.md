@@ -117,7 +117,7 @@ For local development with git hook enforcement, run `git config core.hooksPath 
 All project documentation lives in `docs/`. This README provides only the overview and setup steps.
 
 - [`docs/auto/agent-flow.md`](docs/auto/agent-flow.md) — Complete workflow specification, state machine, and agent reference
-- [`docs/auto/copilot-cloud-setup.md`](docs/auto/copilot-cloud-setup.md) — Setup guide for GitHub Copilot cloud agent (GH_TOKEN, copilot environment, copilot-setup-steps.yml)
+- [`docs/auto/copilot-cloud-setup.md`](docs/auto/copilot-cloud-setup.md) — Setup guide for GitHub Copilot cloud agent (language tooling, copilot-setup-steps.yml)
 
 ## Repository Guardrails
 
