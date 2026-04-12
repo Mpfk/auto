@@ -71,11 +71,11 @@ Use these event-driven transitions when users operate directly from GitHub:
 3. Issue assigned to Copilot while `status/ready` -> implementation starts on `issue/{number}`.
 4. PR opened from `issue/{number}` -> issue moved to `status/in-progress`.
 5. Checks pass and PR is ready for review -> issue moved to `status/review` and Review agent is invoked.
-6. CI checks fail on PR -> develop agent re-invoked on `issue/{number}` with failure output; label stays `status/in-progress`.
+6. CI checks fail on PR -> develop agent re-invoked on `issue/{number}` with failure output and prior retrospective as context; label stays `status/in-progress`.
 7. PR merged -> issue moved to `status/done` and closed.
 
 ### Phase 1: Init
-Invoke the **orchestrate** agent. It creates the GitHub Issue, checks for duplicates, and creates the feature branch. Returns when the issue is in `status/draft`.
+Invoke the **orchestrate** agent. It creates the GitHub Issue and checks for duplicates. Returns when the issue is in `status/draft`.
 
 ### Phase 2: Research
 Invoke the **orchestrate** agent again (or invoke research agents directly). It updates status to `status/researching`, launches parallel research agents, synthesizes findings, and writes the plan. Returns when the plan and acceptance criteria are ready.

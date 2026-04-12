@@ -27,3 +27,8 @@ AGENT_FLOW="docs/auto/agent-flow.md"
   run grep -n "CI checks are green on the PR" "$AGENT_FLOW"
   [ "$status" -eq 0 ]
 }
+
+@test "Orchestrate agent description does not mention feature branch in status/draft context" {
+  run grep -n "status/draft.*feature branch\|feature branch.*status/draft\|and feature branch" "$AGENT_FLOW"
+  [ "$status" -ne 0 ]
+}

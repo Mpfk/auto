@@ -46,3 +46,15 @@ DEVELOP="$REPO_ROOT/.github/agents/develop.agent.md"
 @test "develop.agent.md: list_issue_comments is referenced in retrospective instructions" {
   grep -q "list_issue_comments" "$DEVELOP"
 }
+
+# Test 8: copilot-instructions.md Phase 1 does NOT mention branch creation
+@test "copilot-instructions.md: Phase 1 Init does not mention feature branch" {
+  phase1=$(awk '/^### Phase 1: Init/,/^### Phase 2:/' "$COPILOT_INSTRUCTIONS")
+  run echo "$phase1"
+  [[ "$output" != *"feature branch"* ]]
+}
+
+# Test 9: copilot-instructions.md GitHub-Native Triggers item 6 includes retrospective
+@test "copilot-instructions.md: GitHub-Native Triggers CI failure item mentions prior retrospective" {
+  grep -q "prior retrospective as context" "$COPILOT_INSTRUCTIONS"
+}

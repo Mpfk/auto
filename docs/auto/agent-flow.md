@@ -297,7 +297,7 @@ Handles issue creation, research, and planning — Phases 1-3 of the workflow.
 
 **What it does:**
 - Checks for existing/overlapping GitHub Issues before creating new ones
-- Creates the GitHub Issue (with `status/draft` label) and feature branch
+- Creates the GitHub Issue (with `status/draft` label)
 - Selects and invokes the right Research Agents for the problem
 - Synthesizes research findings (resolving conflicts using project conventions > documented decisions > external best practices)
 - Writes the plan and presents it to you at Gate 1
