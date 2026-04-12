@@ -21,18 +21,29 @@ jobs:
             const pr = context.payload.pull_request;
 
             const branch = pr.head.ref;
-            const match = /^issue\/(\d+)$/.exec(branch);
-            if (!match) {
-              core.setFailed(`PR branch must follow issue/{number}. Got: ${branch}`);
-              return;
+            const prBody = `${pr.title}\n\n${pr.body || ''}`;
+
+            // Extract issue number: prefer branch name (issue/{n}), fall back to 'Closes #N' in PR body.
+            // This supports both the VS Code path (issue/{n} branches) and the Native GitHub path
+            // where GitHub's Copilot SWE agent always creates copilot/... branches.
+            let issueNumber;
+            const branchMatch = /^issue\/(\d+)$/.exec(branch);
+            if (branchMatch) {
+              issueNumber = Number(branchMatch[1]);
+            } else {
+              const bodyMatch = /closes\s+#(\d+)/i.exec(prBody);
+              if (!bodyMatch) {
+                core.setFailed(`PR must either use an issue/{number} branch or include 'Closes #N' in the title/body. Branch: ${branch}`);
+                return;
+              }
+              issueNumber = Number(bodyMatch[1]);
             }
 
-            const issueNumber = Number(match[1]);
             let issue;
             try {
               issue = (await github.rest.issues.get({ owner, repo, issue_number: issueNumber })).data;
             } catch {
-              core.setFailed(`No matching issue found for branch ${branch}.`);
+              core.setFailed(`No matching issue found for #${issueNumber} (branch: ${branch}).`);
               return;
             }
 
@@ -44,10 +55,9 @@ jobs:
               return;
             }
 
-            const body = `${pr.title}\n\n${pr.body || ''}`;
-            if (!body.includes(`Closes #${issueNumber}`)) {
+            if (!prBody.includes(`Closes #${issueNumber}`)) {
               core.setFailed(`PR must include 'Closes #${issueNumber}' in title or body.`);
               return;
             }
 
-            core.info(`Workflow policy checks passed for issue #${issueNumber}.`);
+            core.info(`Workflow policy checks passed for issue #${issueNumber} (branch: ${branch}).`);

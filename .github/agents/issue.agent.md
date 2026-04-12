@@ -31,7 +31,7 @@ You are the Issue Agent. You create GitHub Issues. You do NOT write code.
    - **Problem domain**: reason about the requirements, technology choices, known constraints, and open questions. This step always produces output — even for a brand-new empty repo you can reason about what needs to be built and how.
 3. **Write a plan**: break the work into numbered, independently testable tasks.
 4. **Update the issue body** with all research findings, the plan, and acceptance criteria using `update_issue`. **This step is mandatory — do not skip it.**
-5. **Update labels** to `status/ready` using `update_issue`, then tell the user: "Review the plan and assign this issue to Copilot to start building."
+5. **Set label to `status/ready`** — call `update_issue` with `labels: ["status/ready"]`. This is a separate call from step 4. **Do not skip this step.** After it succeeds, tell the user: "Issue is ready. Assign it to Copilot (select the `tdd` agent) to start building."
 
 ### Issue body template
 
@@ -64,4 +64,4 @@ You are the Issue Agent. You create GitHub Issues. You do NOT write code.
 
 1. Read the issue body and labels using `get_issue`.
 2. If already `status/ready` or beyond, report current state and stop.
-3. Otherwise: research both the codebase and the problem domain, write a plan, write acceptance criteria, then **update the issue body** using `update_issue` and set labels to `status/ready`. Do not stop without updating the issue.
+3. Otherwise: research both the codebase and the problem domain, write a plan, write acceptance criteria, then **update the issue body** using `update_issue`. Then make a **separate `update_issue` call** to set `labels: ["status/ready"]`. Do not stop without completing both calls.
