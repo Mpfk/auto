@@ -34,11 +34,11 @@ When a user asks you to build something, your FIRST action is to create a GitHub
      ## Retrospective
      ### Iteration 1
      ```
-3. **Create a feature branch** named `issue/{issue-number}` from `main`.
-4. **Research** the codebase and problem. Update the issue body with findings.
-5. **Write a plan** with independently testable tasks and acceptance criteria in the issue body.
-6. **Update issue labels** to `status/researching` → `status/planning` → `status/ready` as you progress.
-7. **Present the plan to the user** for approval before implementing.
+3. **Research** the codebase and problem. Update the issue body with findings.
+4. **Write a plan** with independently testable tasks and acceptance criteria in the issue body.
+5. **Update issue labels** to `status/researching` → `status/planning` → `status/ready` as you progress.
+6. **Present the plan to the user** for approval before implementing.
+7. **After plan approval**, create a feature branch named `issue/{issue-number}` from `main` and set label to `status/in-progress`.
 8. **Only after approval**, begin implementation on the `issue/{number}` branch using TDD.
 
 If you cannot create issues (missing tools or permissions), STOP and tell the user: "This workflow requires GitHub issue creation. See `docs/auto/copilot-cloud-setup.md` for setup instructions."
@@ -89,9 +89,9 @@ Update label to `status/in-progress`. Invoke **develop** agents (one per indepen
 Open a **draft** PR from `issue/{number}` → `main` once the first commit is pushed. The PR must remain a draft until all Gate 2 prerequisites are satisfied. Never convert a PR from draft to ready-for-review during the implementation phase.
 
 ### Phase 5: Review
-Before invoking the Review Agent: verify CI checks are green on the PR. If CI checks fail, re-invoke the **develop** agent with the exact failure output — do not proceed to the Review Agent until CI is green.
+Before invoking the Review Agent: verify CI checks are green on the PR. If CI checks fail, re-invoke the **develop** agent with the exact failure output and the retrospective from the last develop agent run — do not proceed to the Review Agent until CI is green.
 
-Once CI is green, update issue label to `status/review`. Invoke the **review** agent with the issue number, branch, and acceptance criteria. Wait for it to complete. If it fails, fix issues and re-run.
+Once CI is green, update issue label to `status/review`. **Do not update the label or invoke the Review Agent while CI is failing.** Invoke the **review** agent with the issue number, branch, and acceptance criteria. Wait for it to complete. If it fails, fix issues and re-run.
 
 When the Review Agent returns PASS and CI is confirmed green: convert the PR from **draft to ready-for-review**. This is the only point at which the PR draft state is lifted.
 

@@ -61,6 +61,29 @@ The prompt that invoked you MUST include all of the following. **If any is missi
   - A suggested split for the remaining work
 - Do NOT attempt to do everything in one invocation.
 
+## Retrospective Logging
+
+After each RED-GREEN-REFACTOR cycle (whether it passes or fails), you MUST log a retrospective. This applies to every invocation — first run and all re-invocations.
+
+### What to log
+
+Include:
+- What was attempted (tasks addressed in this run)
+- What passed (tests green, CI passing checks)
+- What failed (test failures, CI errors, unexpected blockers)
+- Open questions or risks for the next run
+
+### Where to log
+
+1. **Always:** Post a comment to the GitHub Issue using `add_issue_comment`. Title the comment `## Retrospective — <short description of run>`.
+2. **If a PR exists for the branch:** Also post the retrospective as a PR comment using the PR comment tool.
+
+To check if a PR exists: use the list pull requests tool filtered by the current branch name. If no PR is found, skip the PR comment step.
+
+### On re-invocation after CI failure
+
+Before starting any work, read the most recent retrospective comment from the GitHub Issue using `list_issue_comments`. Pass this context into your planning for the current run to avoid repeating approaches that already failed.
+
 ## Rules
 
 - NEVER write implementation code before a failing test exists.
