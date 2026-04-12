@@ -7,6 +7,7 @@ on:
 permissions:
   issues: write
   pull-requests: read
+  contents: write
 
 jobs:
   sync:
@@ -57,4 +58,5 @@ jobs:
             if (action === 'closed' && pr.merged) {
               await setStatus('status/done');
               await github.rest.issues.update({ owner, repo, issue_number, state: 'closed' });
+              await github.rest.git.deleteRef({ owner, repo, ref: `heads/${branch}` }).catch(() => {});
             }
