@@ -1,8 +1,35 @@
 # Using Auto with GitHub Copilot Cloud Agent
 
-No authentication setup is required. The Copilot cloud agent provides its own token with the permissions needed to create issues, manage branches, and open pull requests in the repository it is working in.
+## Required: Enable GitHub MCP Server with Write Access
 
-The only setup you may need is language tooling — if your project requires specific runtimes or dependencies to be pre-installed.
+The built-in GitHub MCP server in the cloud agent is **read-only by default** (URL: `https://api.githubcopilot.com/mcp/readonly`). This means agents can read issues but cannot create or update them, create branches, or open pull requests.
+
+To enable the full workflow (issue creation, label management, branch creation), you **must** override the MCP configuration:
+
+1. Go to your repository on GitHub.
+2. Navigate to **Settings → Copilot → Cloud agent**.
+3. In the **MCP configuration** section, add:
+
+```json
+{
+  "mcpServers": {
+    "github": {
+      "type": "http",
+      "url": "https://api.githubcopilot.com/mcp/",
+      "tools": ["*"],
+      "headers": {
+        "X-MCP-Toolsets": "repos,issues,pull_requests,users,context"
+      }
+    }
+  }
+}
+```
+
+4. Click **Save**.
+
+> **Why `https://api.githubcopilot.com/mcp/` instead of `/readonly`?** Removing `/readonly` enables write operations. The `X-MCP-Toolsets` header controls which toolsets are available. The configuration above enables the toolsets needed by the Auto workflow agents.
+>
+> No personal access token is required — the cloud agent provides its own scoped token automatically.
 
 ## (Optional) Customise for Your Language
 
@@ -13,6 +40,12 @@ If your project requires specific language tooling (Node.js, Python, etc.), open
 > The Copilot cloud agent only reads this file from the default branch (`main`). Changes on feature branches are ignored.
 
 ## Troubleshooting
+
+**Agent says "GitHub issue creation failed" or "mcp_github_issue_write not found":**
+The MCP server is still in read-only mode. Follow the "Required" section above to configure write access.
+
+**Agent sees `github-mcp-server-issue_read` but no write tools:**
+Same cause — the default `/readonly` endpoint only exposes read tools.
 
 To confirm the setup file is valid, run it manually: **Actions → Copilot Setup Steps → Run workflow**. It should complete without errors.
 
