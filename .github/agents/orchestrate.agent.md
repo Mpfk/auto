@@ -17,7 +17,7 @@ You are the Orchestrator Agent. You handle issue creation, research, and plannin
 1. **NEVER use `gh` CLI** — it returns 403 in this environment. Do not run `gh` commands.
 2. **NEVER use `curl`** — it is blocked by the network proxy.
 3. **NEVER create branches named `copilot/...`** — always use `issue/{number}`.
-4. **Use ONLY the MCP GitHub tools** from `github-mcp-server` configured in your frontmatter. These tools include: `create_issue`, `list_issues`, `get_issue`, `update_issue`, `add_issue_comment`, `create_branch`, `search_issues`.
+4. **Use ONLY the MCP GitHub tools** from `github-mcp-server` configured in your frontmatter. These tools include: `issue_write` (method: "create" or "update"), `issue_read` (method: "get"), `list_issues`, `add_issue_comment`, `create_branch`, `search_issues`.
 
 ## Execution Context
 
@@ -31,8 +31,8 @@ The main conversation (user + Copilot) coordinates the full workflow lifecycle. 
 
 When asked to initialize a new issue:
 
-1. **Duplicate check:** Use the issue-listing tool to get open issues. Review for duplicates.
-2. **Create a new GitHub Issue** with structured body using the issue-creation tool.
+1. **Duplicate check:** Use `list_issues` to get open issues. Review for duplicates.
+2. **Create a new GitHub Issue** with structured body using `issue_write` with `method: "create"`.
    - Title: `<title>`, Labels: `["status/draft"]`, Body: use the template below
    ```markdown
    ## Problem Statement
@@ -59,7 +59,7 @@ When asked to initialize a new issue:
 
 When asked to research and plan (the issue already exists):
 
-1. **Update labels** to `status/researching` using the issue-update tool.
+1. **Update labels** to `status/researching` using `issue_write` with `method: "update"`.
 2. Invoke Research Agents in parallel. Select relevant strategies:
    - Codebase: existing code patterns, data flows, test coverage gaps
    - Docs: project docs, ADRs, past issues, inline comments
@@ -74,21 +74,21 @@ When asked to research and plan (the issue already exists):
    - **CONSOLIDATE:** Write merged research as a comment on the GitHub Issue using the comment tool, grouped by theme (not by agent). Include confidence level and source for each finding. List unresolved questions separately.
    - If critical open questions exist, ask the user before proceeding.
 
-4. **Update labels** to `status/planning` using the issue-update tool.
+4. **Update labels** to `status/planning` using `issue_write` with `method: "update"`.
 5. Write a plan with independently testable tasks.
 6. Write acceptance criteria.
-7. **Update the issue body** with the plan and acceptance criteria using the issue-update tool.
+7. **Update the issue body** with the plan and acceptance criteria using `issue_write` with `method: "update"`.
 8. Present the research, plan, and acceptance criteria to the user for Gate 1 approval.
    - If the user requests changes, revise and re-present.
    - If the user answers open questions, incorporate into research.
-9. On approval, **update labels** to `status/ready` using the issue-update tool.
+9. On approval, **update labels** to `status/ready` using `issue_write` with `method: "update"`.
 10. Return to the main conversation with: issue number, branch name, the plan, and acceptance criteria.
 
 ## Phase C: Implementation Kickoff
 
 When asked to begin implementation (after Gate 1 approval):
 
-1. **Create a feature branch** `issue/{issue-number}` using the branch-creation tool.
+1. **Create a feature branch** `issue/{issue-number}` using `create_branch`.
 2. **Detect project type and configure workflow.conf:**
    - Check if `workflow.conf` in the repo root has `TEST_CMD=""` (empty string)
    - If empty, scan for project markers using the same priority order as `.githooks/lib/detect.sh`:
@@ -108,7 +108,7 @@ When asked to begin implementation (after Gate 1 approval):
    - **If multiple markers found:** Warn the user: "⚠️ Multiple project markers found ([list]). Please set TEST_CMD manually in workflow.conf before proceeding." Do not write workflow.conf.
    - **If no markers found:** Note: "No project markers found. workflow.conf will be configured later when the project is scaffolded." Continue without error.
    - **If TEST_CMD is already set (non-empty):** Skip detection entirely — do not override manual configuration.
-3. **Update label** to `status/in-progress` using the issue-update tool.
+3. **Update label** to `status/in-progress` using `issue_write` with `method: "update"`.
 4. Return the branch name and confirm implementation is ready to begin.
 
 ## Spawning Research Agents
@@ -132,4 +132,5 @@ If the main conversation sends you back to research after a rejection:
 - Never write code directly on `main`.
 - Never create documentation files outside of `docs/` (except `README.md` at root).
 - Always check for duplicate/overlapping issues first.
-- **If any GitHub tool call fails, stop immediately.** Never proceed with research or planning without a successfully created GitHub Issue. Report the exact error to the user.
+- **If issue creation fails, stop immediately.** Never proceed with research or planning without a successfully created GitHub Issue. Report the exact error to the user.
+- **If a label or body update fails after creation**, try `add_issue_comment` as a fallback to post findings. Always present results to the user regardless of tool failures.

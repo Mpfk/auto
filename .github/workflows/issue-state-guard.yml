@@ -75,3 +75,35 @@ jobs:
                 body: "Issue is closed without a terminal status label (expected status/done or status/cancelled).",
               });
             }
+
+            // Auto-advance: if body has completed research + plan and label is
+            // still status/draft, promote to status/ready so automation can
+            // pick it up (handles the case where the agent could create/edit
+            // the issue body but failed to update labels).
+            if (issue.state === "open" && active === "status/draft" && context.payload.action === "edited") {
+              const body = issue.body || "";
+              const hasResearch = /### Key Findings\s+[^#\s]/.test(body);
+              const hasPlan = body.includes("## Plan") && /## Plan\s+[^#\s]/.test(body);
+              const hasCriteria = body.includes("## Acceptance Criteria") && /## Acceptance Criteria\s+[^#\s]/.test(body);
+
+              if (hasResearch && hasPlan && hasCriteria) {
+                await github.rest.issues.removeLabel({
+                  owner,
+                  repo,
+                  issue_number: issue.number,
+                  name: "status/draft",
+                }).catch(() => {});
+                await github.rest.issues.addLabels({
+                  owner,
+                  repo,
+                  issue_number: issue.number,
+                  labels: ["status/ready"],
+                });
+                await github.rest.issues.createComment({
+                  owner,
+                  repo,
+                  issue_number: issue.number,
+                  body: "Auto-advanced to status/ready: issue body contains completed Research, Plan, and Acceptance Criteria sections.",
+                });
+              }
+            }

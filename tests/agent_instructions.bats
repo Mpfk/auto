@@ -58,3 +58,83 @@ DEVELOP="$REPO_ROOT/.github/agents/develop.agent.md"
 @test "copilot-instructions.md: GitHub-Native Triggers CI failure item mentions prior retrospective" {
   grep -q "prior retrospective as context" "$COPILOT_INSTRUCTIONS"
 }
+
+# --- Issue #52: MCP tool name and fallback tests ---
+
+ISSUE_AGENT="$REPO_ROOT/.github/agents/issue.agent.md"
+STATE_GUARD="$REPO_ROOT/.github/workflows/issue-state-guard.yml"
+
+# Test: issue.agent.md uses correct MCP tool names (no old names)
+@test "issue.agent.md: no references to deprecated create_issue tool name" {
+  run grep -w "create_issue" "$ISSUE_AGENT"
+  [ "$status" -ne 0 ]
+}
+
+@test "issue.agent.md: no references to deprecated update_issue tool name" {
+  run grep -w "update_issue" "$ISSUE_AGENT"
+  [ "$status" -ne 0 ]
+}
+
+@test "issue.agent.md: no references to deprecated get_issue tool name" {
+  run grep -w "get_issue" "$ISSUE_AGENT"
+  [ "$status" -ne 0 ]
+}
+
+@test "issue.agent.md: references issue_write tool" {
+  grep -q "issue_write" "$ISSUE_AGENT"
+}
+
+@test "issue.agent.md: references issue_read tool" {
+  grep -q "issue_read" "$ISSUE_AGENT"
+}
+
+# Test: issue.agent.md sets intermediate labels
+@test "issue.agent.md: sets status/researching label" {
+  grep -q "status/researching" "$ISSUE_AGENT"
+}
+
+@test "issue.agent.md: sets status/planning label" {
+  grep -q "status/planning" "$ISSUE_AGENT"
+}
+
+# Test: issue.agent.md has fallback section
+@test "issue.agent.md: has fallback section for update failure" {
+  grep -q "Fallback" "$ISSUE_AGENT"
+}
+
+# Test: orchestrate.agent.md uses correct MCP tool names (no old names)
+@test "orchestrate.agent.md: no references to deprecated create_issue tool name" {
+  run grep -w "create_issue" "$ORCHESTRATE"
+  [ "$status" -ne 0 ]
+}
+
+@test "orchestrate.agent.md: no references to deprecated update_issue tool name" {
+  run grep -w "update_issue" "$ORCHESTRATE"
+  [ "$status" -ne 0 ]
+}
+
+@test "orchestrate.agent.md: no references to deprecated get_issue tool name" {
+  run grep -w "get_issue" "$ORCHESTRATE"
+  [ "$status" -ne 0 ]
+}
+
+@test "orchestrate.agent.md: references issue_write tool" {
+  grep -q "issue_write" "$ORCHESTRATE"
+}
+
+# Test: issue-state-guard.yml has body-completeness auto-advance
+@test "issue-state-guard.yml: auto-advances on completed body" {
+  grep -q "Auto-advanced to status/ready" "$STATE_GUARD"
+}
+
+@test "issue-state-guard.yml: checks for Key Findings content" {
+  grep -q "Key Findings" "$STATE_GUARD"
+}
+
+@test "issue-state-guard.yml: checks for Plan content" {
+  grep -q "## Plan" "$STATE_GUARD"
+}
+
+@test "issue-state-guard.yml: checks for Acceptance Criteria content" {
+  grep -q "Acceptance Criteria" "$STATE_GUARD"
+}
