@@ -53,27 +53,7 @@ When asked to initialize a new issue:
    ## Retrospective
    ### Iteration 1
    ```
-3. **Create a feature branch** `issue/{issue-number}` using the branch-creation tool.
-4. **Detect project type and configure workflow.conf:**
-   - Check if `workflow.conf` in the repo root has `TEST_CMD=""` (empty string)
-   - If empty, scan for project markers using the same priority order as `.githooks/lib/detect.sh`:
-     - `package.json` → `npm test`
-     - `pyproject.toml` or `setup.py` → `pytest`
-     - `Cargo.toml` → `cargo test`
-     - `go.mod` → `go test ./...`
-     - `pom.xml` → `mvn test`
-     - `build.gradle` / `build.gradle.kts` → `gradle test`
-   - **If exactly one marker found:** Run the following shell command to update workflow.conf:
-     ```bash
-     sed -i '' 's/^TEST_CMD=.*/TEST_CMD="<detected_value>"/' workflow.conf
-     git add workflow.conf
-     git commit -m "chore(config): auto-detect test runner as <detected_value>"
-     ```
-     Then report to the user: "Detected [project type] project, configured TEST_CMD as [detected_value] in workflow.conf"
-   - **If multiple markers found:** Warn the user: "⚠️ Multiple project markers found ([list]). Please set TEST_CMD manually in workflow.conf before proceeding." Do not write workflow.conf.
-   - **If no markers found:** Note: "No project markers found. workflow.conf will be configured later when the project is scaffolded." Continue without error.
-   - **If TEST_CMD is already set (non-empty):** Skip detection entirely — do not override manual configuration.
-5. Return the issue number, branch name, and issue URL to the main conversation.
+3. Return the issue number and issue URL to the main conversation.
 
 ## Phase B: Research + Plan
 
@@ -103,6 +83,33 @@ When asked to research and plan (the issue already exists):
    - If the user answers open questions, incorporate into research.
 9. On approval, **update labels** to `status/ready` using the issue-update tool.
 10. Return to the main conversation with: issue number, branch name, the plan, and acceptance criteria.
+
+## Phase C: Implementation Kickoff
+
+When asked to begin implementation (after Gate 1 approval):
+
+1. **Create a feature branch** `issue/{issue-number}` using the branch-creation tool.
+2. **Detect project type and configure workflow.conf:**
+   - Check if `workflow.conf` in the repo root has `TEST_CMD=""` (empty string)
+   - If empty, scan for project markers using the same priority order as `.githooks/lib/detect.sh`:
+     - `package.json` → `npm test`
+     - `pyproject.toml` or `setup.py` → `pytest`
+     - `Cargo.toml` → `cargo test`
+     - `go.mod` → `go test ./...`
+     - `pom.xml` → `mvn test`
+     - `build.gradle` / `build.gradle.kts` → `gradle test`
+   - **If exactly one marker found:** Run the following shell command to update workflow.conf:
+     ```bash
+     sed -i '' 's/^TEST_CMD=.*/TEST_CMD="<detected_value>"/' workflow.conf
+     git add workflow.conf
+     git commit -m "chore(config): auto-detect test runner as <detected_value>"
+     ```
+     Then report to the user: "Detected [project type] project, configured TEST_CMD as [detected_value] in workflow.conf"
+   - **If multiple markers found:** Warn the user: "⚠️ Multiple project markers found ([list]). Please set TEST_CMD manually in workflow.conf before proceeding." Do not write workflow.conf.
+   - **If no markers found:** Note: "No project markers found. workflow.conf will be configured later when the project is scaffolded." Continue without error.
+   - **If TEST_CMD is already set (non-empty):** Skip detection entirely — do not override manual configuration.
+3. **Update label** to `status/in-progress` using the issue-update tool.
+4. Return the branch name and confirm implementation is ready to begin.
 
 ## Spawning Research Agents
 

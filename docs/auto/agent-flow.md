@@ -25,15 +25,15 @@ When users operate directly in GitHub, use this event mapping:
 |--------|------------|--------|
 | Issue created with `status/draft` | Issue agent intake and planning | Research and plan packet prepared for Gate 1 |
 | Plan approved | Status transition | Issue moves to `status/ready` |
-| Copilot assigned to `status/ready` issue | Implementation kickoff | Branch `issue/{number}` and TDD work starts |
+| Copilot assigned to `status/ready` issue | Implementation kickoff | Branch `issue/{number}` created, label set to `status/in-progress`, TDD work starts |
 | PR opened from `issue/{number}` | Issue/PR sync | Issue moves to `status/in-progress` |
 | Checks green + PR ready for review | Review kickoff | Issue moves to `status/review`, Review agent runs, PR converted from draft to ready |
-| CI checks fail on PR | Develop re-invocation | Develop agent re-invoked on `issue/{number}` with failure output; label stays `status/in-progress` |
+| CI checks fail on PR | Develop re-invocation | Develop agent re-invoked on `issue/{number}` with failure output and prior retrospective as context; label stays `status/in-progress` |
 | PR merged | Completion sync | Issue moves to `status/done` and closes |
 
 ```mermaid
 flowchart TD
-    A([You describe what you need]) --> B[Orchestrate: create GitHub Issue + branch]
+    A([You describe what you need]) --> B[Orchestrate: create GitHub Issue]
     B --> C[Research Agents: investigate in parallel]
     C --> D[Orchestrate: synthesize findings + write plan]
     D --> G1{Gate 1: Plan Approval\n— main conversation —}
@@ -68,11 +68,11 @@ The main conversation drives the state machine. Agents are workers, not managers
 
 | Phase | Who runs it | What happens |
 |-------|------------|--------------|
-| 1. Init | Orchestrate agent | Creates GitHub Issue + branch, checks for duplicates |
+| 1. Init | Orchestrate agent | Creates GitHub Issue, checks for duplicates |
 | 2. Research | Research agents (parallel) | Investigate codebase, docs, external, constraints |
 | 3. Synthesize + Plan | Orchestrate agent | Merges research, writes plan, presents Gate 1 |
 | 4. Gate 1 | Main conversation | User approves or revises the plan |
-| 5. Implement | Develop + Documentation agents (parallel) | Code via Red-Green-Refactor, update docs |
+| 5. Implement | Develop + Documentation agents (parallel) | Creates feature branch, code via Red-Green-Refactor, update docs |
 | 6. Review | Review agent | Validates TDD compliance, quality, tests |
 | 7. Gate 2 | Main conversation | User approves merge or rejects with feedback |
 | 8. Merge | Main conversation | Merges branch, closes issue |
@@ -232,8 +232,8 @@ stateDiagram-v2
 | `researching` | `planning` | All Research Agents returned findings | No |
 | `planning` | `ready` | Plan and acceptance criteria written | **Yes (Gate 1)** |
 | `ready` | `in-progress` | At least one Develop Agent invoked | No |
-| `in-progress` | `review` | All tasks done, all tests pass, docs updated | No |
-| `in-progress` | `in-progress` | CI checks fail on PR; develop agent re-invoked with failure output | No |
+| `in-progress` | `review` | All tasks done, all tests pass locally, CI checks are green on the PR, docs updated | No |
+| `in-progress` | `in-progress` | CI checks fail on PR; develop agent re-invoked with failure output and prior retrospective | No |
 | `review` | `done` | Review Agent PASS, CI checks green, PR converted from draft to ready, retrospective written, **label is `status/review`** | **Yes (Gate 2)** |
 | `review` | `researching` | You reject at Gate 2, retrospective captures learnings | **Yes (rejection)** |
 | Any active | `blocked` | Agent cannot proceed, reason logged | No |
@@ -297,7 +297,7 @@ Handles issue creation, research, and planning — Phases 1-3 of the workflow.
 
 **What it does:**
 - Checks for existing/overlapping GitHub Issues before creating new ones
-- Creates the GitHub Issue (with `status/draft` label) and feature branch
+- Creates the GitHub Issue (with `status/draft` label)
 - Selects and invokes the right Research Agents for the problem
 - Synthesizes research findings (resolving conflicts using project conventions > documented decisions > external best practices)
 - Writes the plan and presents it to you at Gate 1
