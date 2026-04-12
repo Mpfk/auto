@@ -23,9 +23,9 @@ jobs:
     runs-on: ubuntu-latest
 
     permissions:
-      contents: write
-      issues: write
-      pull-requests: write
+      # These permissions apply ONLY to the setup workflow steps below.
+      # Copilot cloud agent receives its own separately-scoped token for runtime operations.
+      contents: read
 
     steps:
       - name: Checkout code
