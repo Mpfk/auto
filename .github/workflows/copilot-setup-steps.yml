@@ -23,8 +23,9 @@ jobs:
     runs-on: ubuntu-latest
 
     permissions:
-      # Required to check out code during setup steps.
-      contents: read
+      contents: write
+      issues: write
+      pull-requests: write
 
     steps:
       - name: Checkout code
