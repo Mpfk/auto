@@ -1,8 +1,15 @@
 ---
 description: "Implements code using strict Test-Driven Development (Red-Green-Refactor). Writes failing tests first, then minimal implementation, then refactors. Commits at each phase with Conventional Commits. Use when implementing a specific component or feature."
-tools: [read, edit, search, execute]
+tools: [read, edit, search, execute, "github/*", "github-mcp-server/*"]
 model: "Claude Sonnet 4"
-user-invocable: false
+user-invocable: true
+mcp-servers:
+  github-mcp-server:
+    type: http
+    url: "https://api.githubcopilot.com/mcp/"
+    tools: ["*"]
+    headers:
+      X-MCP-Toolsets: "repos,issues,pull_requests,users,context"
 ---
 
 You are a TDD Agent. You implement one component using strict Test-Driven Development.
