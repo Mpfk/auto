@@ -27,7 +27,8 @@ When users operate directly in GitHub, use this event mapping:
 | Plan approved | Status transition | Issue moves to `status/ready` |
 | Copilot assigned to `status/ready` issue | Implementation kickoff | Branch `issue/{number}` and TDD work starts |
 | PR opened from `issue/{number}` | Issue/PR sync | Issue moves to `status/in-progress` |
-| Checks green + PR ready | Review kickoff | Issue moves to `status/review` and Review agent runs |
+| Checks green + PR ready for review | Review kickoff | Issue moves to `status/review`, Review agent runs, PR converted from draft to ready |
+| CI checks fail on PR | Develop re-invocation | Develop agent re-invoked on `issue/{number}` with failure output; label stays `status/in-progress` |
 | PR merged | Completion sync | Issue moves to `status/done` and closes |
 
 ```mermaid
@@ -41,7 +42,9 @@ flowchart TD
     SC -- No --> E
     SCAF --> E[Develop + Doc Agents: implement in parallel]
     G1 -- You revise --> D
-    E --> SR[Main conversation:\nset label to status/review]
+    E --> CI{CI checks\npass?}
+    CI -- Fail --> E
+    CI -- Pass --> SR[Main conversation:\nset label to status/review\nconvert PR draft → ready]
     SR --> F[Review Agent: validate]
     F -- Fails --> E
     F -- Passes --> R[Main conversation:\nwrite retrospective]
@@ -54,6 +57,7 @@ flowchart TD
     style G2 fill:#ff6b6b,color:#fff,stroke:#c0392b
     style M fill:#2ecc71,color:#fff,stroke:#27ae60
     style SR fill:#f39c12,color:#fff,stroke:#e67e22
+    style CI fill:#f39c12,color:#fff,stroke:#e67e22
 ```
 
 Every piece of work is tracked as a GitHub Issue, developed on its own branch, implemented test-first, and documented before it reaches `main`.
@@ -193,7 +197,8 @@ stateDiagram-v2
     researching --> planning : All research agents returned
     planning --> ready : You approve plan (Gate 1)
     ready --> in_progress : Develop agents invoked
-    in_progress --> review : All tasks done, tests pass
+    in_progress --> review : All tasks done, tests pass, CI green
+    in_progress --> in_progress : CI checks fail — develop re-invoked
     review --> done : You approve merge (Gate 2)
     review --> researching : You reject (Gate 2) — retrospective written
 
@@ -228,13 +233,16 @@ stateDiagram-v2
 | `planning` | `ready` | Plan and acceptance criteria written | **Yes (Gate 1)** |
 | `ready` | `in-progress` | At least one Develop Agent invoked | No |
 | `in-progress` | `review` | All tasks done, all tests pass, docs updated | No |
-| `review` | `done` | Review passes, retrospective written, **label is `status/review`** | **Yes (Gate 2)** |
+| `in-progress` | `in-progress` | CI checks fail on PR; develop agent re-invoked with failure output | No |
+| `review` | `done` | Review Agent PASS, CI checks green, PR converted from draft to ready, retrospective written, **label is `status/review`** | **Yes (Gate 2)** |
 | `review` | `researching` | You reject at Gate 2, retrospective captures learnings | **Yes (rejection)** |
 | Any active | `blocked` | Agent cannot proceed, reason logged | No |
 | `blocked` | Previous state | Blocking condition resolved | No |
 | Any active | `cancelled` | You decide to stop | **Yes** |
 
 **Critical rule:** The issue label MUST be updated to `status/review` BEFORE presenting Gate 2 to the user. This transition is performed by the main conversation when all Develop agents have completed and tests pass. The label `status/review` signals "awaiting human review." Skipping this transition is a workflow violation.
+
+**Gate 2 prerequisites (all three required):** (1) issue has `status/review` label, (2) Review Agent returned PASS, (3) CI checks are green. Only after all three are satisfied does the main conversation convert the PR from **draft to ready-for-review** and present Gate 2. Marking a PR as ready-for-review before these prerequisites are met is a workflow violation.
 
 ### Blocked Issues
 

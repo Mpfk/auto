@@ -36,3 +36,5 @@ The prompt that invoked you MUST include all of the following. **If any is missi
 - If tests are missing for changed code, that is a FAIL.
 - If documentation is missing for user-facing changes, that is a FAIL.
 - A failing test suite is always a FAIL, no exceptions.
+- Your scope is the local test suite and code quality — you do not inspect remote CI check status.
+- The main conversation is responsible for verifying CI checks are green and for converting the PR from draft to ready-for-review. Do not instruct or assume the PR state is changed.

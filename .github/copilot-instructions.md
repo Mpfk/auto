@@ -70,8 +70,9 @@ Use these event-driven transitions when users operate directly from GitHub:
 2. Plan approved -> issue moved to `status/ready`.
 3. Issue assigned to Copilot while `status/ready` -> implementation starts on `issue/{number}`.
 4. PR opened from `issue/{number}` -> issue moved to `status/in-progress`.
-5. Checks pass and PR is ready -> issue moved to `status/review` and Review agent is invoked.
-6. PR merged -> issue moved to `status/done` and closed.
+5. Checks pass and PR is ready for review -> issue moved to `status/review` and Review agent is invoked.
+6. CI checks fail on PR -> develop agent re-invoked on `issue/{number}` with failure output; label stays `status/in-progress`.
+7. PR merged -> issue moved to `status/done` and closed.
 
 ### Phase 1: Init
 Invoke the **orchestrate** agent. It creates the GitHub Issue, checks for duplicates, and creates the feature branch. Returns when the issue is in `status/draft`.
@@ -85,11 +86,22 @@ Invoke the **orchestrate** agent again (or invoke research agents directly). It 
 ### Phase 4: Implement
 Update label to `status/in-progress`. Invoke **develop** agents (one per independent task) and **documentation** agent in parallel. Each develop agent receives fully materialized context (see "Spawning Agents" below). If this is the first implementation on the project (no package.json / no build tool), include scaffold instructions in the develop agent prompt.
 
+Open a **draft** PR from `issue/{number}` → `main` once the first commit is pushed. The PR must remain a draft until all Gate 2 prerequisites are satisfied. Never convert a PR from draft to ready-for-review during the implementation phase.
+
 ### Phase 5: Review
-Update issue label to `status/review`. Invoke the **review** agent with the issue number, branch, and acceptance criteria. Wait for it to complete. If it fails, fix issues and re-run.
+Before invoking the Review Agent: verify CI checks are green on the PR. If CI checks fail, re-invoke the **develop** agent with the exact failure output — do not proceed to the Review Agent until CI is green.
+
+Once CI is green, update issue label to `status/review`. Invoke the **review** agent with the issue number, branch, and acceptance criteria. Wait for it to complete. If it fails, fix issues and re-run.
+
+When the Review Agent returns PASS and CI is confirmed green: convert the PR from **draft to ready-for-review**. This is the only point at which the PR draft state is lifted.
 
 ### Phase 6: Gate 2 — Merge Approval
-**You handle this in the main conversation.** The issue **MUST have the `status/review` label before presenting Gate 2** — this is a hard prerequisite. Present the review summary, retrospective, diff, and proposed merge commit. On rejection: write retrospective as issue comment, update label to `status/researching`, go to Phase 2.
+**You handle this in the main conversation.** Three prerequisites **MUST** all be satisfied before presenting Gate 2 — these are hard requirements:
+1. Issue has `status/review` label.
+2. Review Agent returned **PASS**.
+3. CI checks are **green** on the PR.
+
+Once all three are confirmed, the PR has been converted from draft to ready-for-review. Present the review summary, retrospective, diff, and proposed merge commit. On rejection: write retrospective as issue comment, update label to `status/researching`, go to Phase 2.
 
 ### Phase 7: Merge
 Merge the branch with a Conventional Commits message. Update issue label to `status/done` and close the issue.
