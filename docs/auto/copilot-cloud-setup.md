@@ -2,9 +2,9 @@
 
 ## GitHub MCP Server Write Access
 
-The built-in GitHub MCP server in the cloud agent is **read-only by default** (URL: `https://api.githubcopilot.com/mcp/readonly`). This means agents can read issues but cannot create or update them, create branches, or open pull requests.
+The built-in GitHub MCP server in the cloud agent is **read-only by default**. This means agents can read issues but cannot create or update them, create branches, or open pull requests.
 
-**Auto's custom agents (issue, orchestrator) ship with `mcp-servers` frontmatter that overrides the built-in read-only server with write access.** This means repos created from this template get write-enabled GitHub tools automatically when using the `@issue` or `@orchestrator` agents — no manual repo setup needed.
+**Auto's custom agents (issue, orchestrator) ship with `mcp-servers` frontmatter that overrides the built-in read-only server with write access at `https://api.githubcopilot.com/mcp/`.** Repos created from this template get write-enabled GitHub tools automatically when using the `@issue` or `@orchestrator` agents — no manual repo setup needed.
 
 ### If you're NOT using the custom agents
 
@@ -17,7 +17,7 @@ If you use the default **Copilot** agent (not `@issue` or `@orchestrator`), it w
 ```json
 {
   "mcpServers": {
-    "github": {
+    "github-mcp-server": {
       "type": "http",
       "url": "https://api.githubcopilot.com/mcp/",
       "tools": ["*"],
@@ -31,7 +31,7 @@ If you use the default **Copilot** agent (not `@issue` or `@orchestrator`), it w
 
 4. Click **Save**.
 
-> **Why `https://api.githubcopilot.com/mcp/` instead of `/readonly`?** Removing `/readonly` enables write operations. The `X-MCP-Toolsets` header controls which toolsets are available. The configuration above enables the toolsets needed by the Auto workflow agents.
+> **Why `https://api.githubcopilot.com/mcp/`?** The write-enabled endpoint (without `/readonly` suffix) provides create and update permissions. The `X-MCP-Toolsets` header controls which toolsets are available. The key must be `"github-mcp-server"` to override the built-in server.
 >
 > No personal access token is required — the cloud agent provides its own scoped token automatically.
 
@@ -49,7 +49,7 @@ If your project requires specific language tooling (Node.js, Python, etc.), open
 The MCP server is still in read-only mode. Follow the "Required" section above to configure write access.
 
 **Agent sees `github-mcp-server-issue_read` but no write tools:**
-Same cause — the default `/readonly` endpoint only exposes read tools.
+The built-in MCP server is read-only. Verify that agents have the `mcp-servers` frontmatter override pointing to `https://api.githubcopilot.com/mcp/` with key `github-mcp-server`.
 
 To confirm the setup file is valid, run it manually: **Actions → Copilot Setup Steps → Run workflow**. It should complete without errors.
 
