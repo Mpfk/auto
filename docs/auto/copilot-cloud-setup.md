@@ -1,14 +1,12 @@
 # Using Auto with GitHub Copilot Cloud Agent
 
-## GitHub MCP Server Write Access
+## Required: Configure GitHub MCP Server Write Access
 
-The built-in GitHub MCP server in the cloud agent is **read-only by default**. This means agents can read issues but cannot create or update them, create branches, or open pull requests.
+The built-in GitHub MCP server in the cloud agent is **read-only by default**. This means agents can read issues but cannot create or update them, add comments, change labels, create branches, or open pull requests.
 
-**Auto's custom agents (`@issue`, `@orchestrate`) ship with `mcp-servers` frontmatter that overrides the built-in read-only server with write access at `https://api.githubcopilot.com/mcp/`.** Repos created from this template get write-enabled GitHub tools automatically when using the `@issue` or `@orchestrate` agents — no manual repo setup needed.
+**Every repo created from this template must configure write access manually.** This is a repo-level setting that cannot be shipped in template files.
 
-### If you're NOT using the custom agents
-
-If you use the default **Copilot** agent (not `@issue` or `@orchestrate`), it won't have the MCP override. You can add write access repo-wide:
+### Setup Steps
 
 1. Go to your repository on GitHub.
 2. Navigate to **Settings → Copilot → Cloud agent**.
@@ -31,9 +29,9 @@ If you use the default **Copilot** agent (not `@issue` or `@orchestrate`), it wo
 
 4. Click **Save**.
 
-> **Why `https://api.githubcopilot.com/mcp/`?** The write-enabled endpoint (without `/readonly` suffix) provides create and update permissions. The `X-MCP-Toolsets` header controls which toolsets are available. The key must be `"github-mcp-server"` to override the built-in server.
->
-> No personal access token is required — the cloud agent provides its own scoped token automatically.
+> **Why is this needed?** The built-in GitHub MCP server uses a specially scoped token that only has read-only access. The repo-level MCP configuration overrides this with the write-enabled endpoint (`https://api.githubcopilot.com/mcp/` without the `/readonly` suffix). The key must be `"github-mcp-server"` to override the built-in server. No personal access token is required — the cloud agent provides its own scoped token automatically.
+
+> **Why can't agent frontmatter handle this?** The `mcp-servers` block in `.agent.md` files configures which MCP tools the agent can use and the endpoint URL, but it does not change the token scope granted by the platform. The repo-level config is what actually grants write permissions.
 
 ## (Optional) Customise for Your Language
 
@@ -45,19 +43,20 @@ If your project requires specific language tooling (Node.js, Python, etc.), open
 
 ## Troubleshooting
 
+**Agent returns `403 Resource not accessible by integration` when updating issues:**
+The repo-level MCP configuration is missing or incorrect. Follow the "Required" setup steps above. This is the most common issue — the `mcp-servers` frontmatter in agent files is not sufficient on its own.
+
 **Agent says "GitHub issue creation failed" or "mcp_github_issue_write not found":**
-The MCP server is still in read-only mode. Follow the "Required" section above to configure write access.
+Same root cause — the MCP server is still in read-only mode. Configure write access via Settings → Copilot → Cloud agent.
 
 **Agent sees `github-mcp-server-issue_read` but no write tools:**
-The built-in MCP server is read-only. Verify that agents have the `mcp-servers` frontmatter override pointing to `https://api.githubcopilot.com/mcp/` with key `github-mcp-server`.
+The built-in MCP server is read-only. Verify the repo-level MCP configuration is set correctly.
 
 To confirm the setup file is valid, run it manually: **Actions → Copilot Setup Steps → Run workflow**. It should complete without errors.
 
-If an agent fails with a `gh` authentication error despite no PAT being required, this likely means the repository's GitHub Actions settings are restricting the default token permissions. Check **Settings → Actions → General → Workflow permissions** and ensure **Read and write permissions** is selected.
-
 ## Native Automation Workflows
 
-This template now includes GitHub-native automation workflows:
+This template includes GitHub-native automation workflows:
 
 - `.github/workflows/issue-state-guard.yml` normalizes and validates status labels.
 - `.github/workflows/issue-native-automation.yml` reacts to issue labels, assignment, and slash commands.
