@@ -279,7 +279,7 @@ The Issue agent supports GitHub-native intake and planning when work starts from
 
 **What it does NOT do:** implementation, Gate 2, or merge.
 
-**Config:** `.github/agents/issue.agent.md` | Model: Claude Opus 4 | Tools: read, edit, search, execute, agent, web
+**Config:** `.github/agents/issue.agent.md` | Model: Claude Opus 4 | Tools: read, edit, search, execute, agent, web, mcp_github_*
 
 All agent prompts must be **fully self-contained** — the invoker provides exact issue numbers, branch names, acceptance criteria (verbatim), and file paths. Agents do not discover context from file references or placeholders. Each agent has a guard clause: if required context is missing, it stops and reports what's needed.
 
@@ -296,7 +296,7 @@ Handles issue creation, research, and planning — Phases 1-3 of the workflow.
 
 **What it does NOT do:** Implementation, review, Gate 2, or merge — the main conversation handles those phases directly.
 
-**Config:** `.github/agents/orchestrator.agent.md` | Model: Claude Opus 4 | Tools: read, edit, search, execute, agent, web
+**Config:** `.github/agents/orchestrator.agent.md` | Model: Claude Opus 4 | Tools: read, edit, search, execute, agent, web, mcp_github_*
 
 ### Research Agent
 
