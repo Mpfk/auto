@@ -75,7 +75,7 @@ Include:
 
 ### Where to log
 
-1. **Always:** Post a comment to the GitHub Issue using `add_issue_comment`. Title the comment `## Retrospective — <short description of run>`.
+1. **Always:** Post a comment to the GitHub Issue using `add_issue_comment`. First count the number of existing comments on the issue that contain `## Retrospective — Iteration` (use `list_issue_comments`), then title the new comment `## Retrospective — Iteration N` where N = that count + 1.
 2. **If a PR exists for the branch:** Also post the retrospective as a PR comment using the PR comment tool.
 
 To check if a PR exists: use the list pull requests tool filtered by the current branch name. If no PR is found, skip the PR comment step.

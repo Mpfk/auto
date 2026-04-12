@@ -27,7 +27,8 @@ When users operate directly in GitHub, use this event mapping:
 | Plan approved | Status transition | Issue moves to `status/ready` |
 | Copilot assigned to `status/ready` issue | Implementation kickoff | Branch `issue/{number}` created, label set to `status/in-progress`, TDD work starts |
 | PR opened from `issue/{number}` | Issue/PR sync | Issue moves to `status/in-progress` |
-| Checks green + PR ready for review | Review kickoff | Issue moves to `status/review`, Review agent runs, PR converted from draft to ready |
+| CI checks green on draft PR | Review kickoff | Issue moves to `status/review`, Review Agent invoked |
+| Review Agent returns PASS | PR state change | PR converted from draft to ready-for-review |
 | CI checks fail on PR | Develop re-invocation | Develop agent re-invoked on `issue/{number}` with failure output and prior retrospective as context; label stays `status/in-progress` |
 | PR merged | Completion sync | Issue moves to `status/done` and closes |
 
@@ -40,17 +41,17 @@ flowchart TD
     G1 -- You approve --> SC{New project?}
     SC -- Yes --> SCAF[Develop Agent: scaffold project]
     SC -- No --> E
-    SCAF --> E[Develop + Doc Agents: implement in parallel]
+    SCAF --> E[Develop + Doc Agents: implement in parallel\nDevelop Agent posts Retrospective — Iteration N after each cycle]
     G1 -- You revise --> D
     E --> CI{CI checks\npass?}
     CI -- Fail --> E
-    CI -- Pass --> SR[Main conversation:\nset label to status/review\nconvert PR draft → ready]
+    CI -- Pass --> SR[Main conversation:\nset label to status/review]
     SR --> F[Review Agent: validate]
     F -- Fails --> E
-    F -- Passes --> R[Main conversation:\nwrite retrospective]
-    R --> G2{Gate 2: Merge Approval\n— main conversation —}
+    F -- Passes --> CONV[Main conversation:\nconvert PR draft → ready-for-review]
+    CONV --> G2{Gate 2: Merge Approval\n— main conversation —}
     G2 -- You approve --> M[Main conversation: merge to main]
-    G2 -- You reject --> RETRO[Retrospective captures learnings]
+    G2 -- You reject --> RETRO[Post Retrospective — Iteration N comment\nloop to research]
     RETRO --> C
 
     style G1 fill:#ff6b6b,color:#fff,stroke:#c0392b
@@ -234,8 +235,8 @@ stateDiagram-v2
 | `ready` | `in-progress` | At least one Develop Agent invoked | No |
 | `in-progress` | `review` | All tasks done, all tests pass locally, CI checks are green on the PR, docs updated | No |
 | `in-progress` | `in-progress` | CI checks fail on PR; develop agent re-invoked with failure output and prior retrospective | No |
-| `review` | `done` | Review Agent PASS, CI checks green, PR converted from draft to ready, retrospective written, **label is `status/review`** | **Yes (Gate 2)** |
-| `review` | `researching` | You reject at Gate 2, retrospective captures learnings | **Yes (rejection)** |
+| `review` | `done` | Review Agent PASS, CI checks green, PR converted from draft to ready, **label is `status/review`** | **Yes (Gate 2)** |
+| `review` | `researching` | You reject at Gate 2; post `## Retrospective — Iteration N` comment to issue (N = count of prior retrospective comments + 1) | **Yes (rejection)** |
 | Any active | `blocked` | Agent cannot proceed, reason logged | No |
 | `blocked` | Previous state | Blocking condition resolved | No |
 | Any active | `cancelled` | You decide to stop | **Yes** |
@@ -265,8 +266,6 @@ GitHub Issues use a structured body template (enforced via `.github/ISSUE_TEMPLA
 ### Open Questions
 ## Plan
 ## Acceptance Criteria
-## Retrospective
-### Iteration 1
 ```
 
 Branches follow the naming convention `issue/{issue-number}` (e.g., `issue/42`).
@@ -359,6 +358,8 @@ flowchart LR
 **Scaffold handling:** For new projects (no `package.json` or build tool), the Develop agent sets up the project skeleton first and commits as `chore(scaffold): ...` before beginning the RED-GREEN-REFACTOR cycle.
 
 If the agent discovers missing requirements, it logs a new GitHub Issue rather than scope-creeping.
+
+After each RED-GREEN-REFACTOR cycle, the Develop Agent posts a `## Retrospective — Iteration N` comment to the issue (and PR if it exists), where N is determined by counting prior `## Retrospective — Iteration` comments on the issue. This applies to every invocation — not only on CI failure.
 
 **Config:** `.github/agents/develop.agent.md` | Tools: read, edit, search, execute
 
