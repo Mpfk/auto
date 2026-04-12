@@ -5,7 +5,7 @@ A reusable project template that enforces structured software development throug
 ## Quick Start
 
 1. Clone this template into your new project
-2. Start working by invoking the Orchestrator agent in Copilot Chat: `@orchestrator`
+2. Start working by invoking the Orchestrate agent in Copilot Chat: `@orchestrate`
 
 ## How To Use
 
@@ -17,7 +17,7 @@ Use this path if you want to drive the workflow entirely from GitHub — no loca
 
 **Prerequisites**
 - GitHub Copilot plan with coding agent (assign-to-Copilot) access
-- MCP write access — the `@issue` and `@orchestrator` agents ship with `mcp-servers` frontmatter that enables GitHub write tools (create issues, create branches, etc.) automatically. No extra setup needed when using those agents. If you want the **default Copilot agent** to also have write access, follow the one-time repo configuration in [`docs/auto/copilot-cloud-setup.md`](docs/auto/copilot-cloud-setup.md).
+- MCP write access — the `@issue` and `@orchestrate` agents ship with `mcp-servers` frontmatter that enables GitHub write tools (create issues, create branches, etc.) automatically. No extra setup needed when using those agents. If you want the **default Copilot agent** to also have write access, follow the one-time repo configuration in [`docs/auto/copilot-cloud-setup.md`](docs/auto/copilot-cloud-setup.md).
 
 **Steps**
 1. Open Copilot Chat on GitHub and invoke `@issue` with a plain-English description of the work (e.g. `@issue Add a contact form with name, email, and message fields`)
@@ -45,19 +45,19 @@ Open the Copilot Chat panel and type the agent name to start:
 | What you want | Command |
 |---|---|
 | Start new work from a description | `@issue Add a contact form with name and email` |
-| Start new work with full orchestration | `@orchestrator` |
+| Start new work with full orchestration | `@orchestrate` |
 | Re-plan an existing issue | `@issue 42` |
 
 The agent drives the workflow — creating the issue, running research, writing a plan, and presenting it for your approval. You stay in control at two gates: plan approval and merge approval.
 
 ## How It Works
 
-The Orchestrator agent manages the full development lifecycle in chat-driven mode:
+The `@orchestrate` agent manages the full development lifecycle in chat-driven mode:
 
 1. You describe what you need (feature, bug fix, refactor)
-2. The Orchestrator creates a GitHub Issue, spawns Research Agents in parallel, synthesizes findings, and writes a plan
+2. It creates a GitHub Issue, spawns Research Agents in parallel, synthesizes findings, and writes a plan
 3. You approve the plan (Gate 1)
-4. TDD and Documentation Agents implement the work on a feature branch
+4. `@develop` and Documentation Agents implement the work on a feature branch
 5. The Review Agent validates everything
 6. You approve the merge (Gate 2)
 
@@ -92,24 +92,24 @@ See [`docs/auto/agent-flow.md`](docs/auto/agent-flow.md) for the complete workfl
 git clone <template-repo-url> my-new-project
 cd my-new-project
 
-# Invoke the Orchestrator to start your first issue
-# In VS Code Copilot Chat: @orchestrator
+# Invoke the Orchestrate agent to start your first issue
+# In VS Code Copilot Chat: @orchestrate
 ```
 
 For local development with git hook enforcement, run `git config core.hooksPath .githooks` once after cloning. This is not required for GitHub-native (cloud agent) mode.
 
 ### Configuration
 
-`workflow.conf` is auto-configured on first use. The Orchestrator detects your project's test runner from standard marker files (`package.json`, `pyproject.toml`, `go.mod`, `Cargo.toml`, etc.) and writes the detected value back to `workflow.conf`. You only need to edit it manually if auto-detection doesn't match your setup.
+`workflow.conf` is auto-configured on first use. The `@orchestrate` agent detects your project's test runner from standard marker files (`package.json`, `pyproject.toml`, `go.mod`, `Cargo.toml`, etc.) and writes the detected value back to `workflow.conf`. You only need to edit it manually if auto-detection doesn't match your setup.
 
 ### Agents
 
 | Agent | Purpose |
 |-------|---------|
 | Issue | GitHub-native intake. Creates or normalizes issue structure, runs research and planning, prepares `status/ready`. |
-| Orchestrator | Entry point. Creates GitHub Issues, manages workflow, delegates to agents, enforces approval gates. |
+| Orchestrate | Entry point. Creates GitHub Issues, manages workflow, delegates to agents, enforces approval gates. |
 | Research | Investigates one angle of a problem. Runs 2-4 in parallel. |
-| TDD | Implements code via strict Red-Green-Refactor cycle. |
+| Develop | Implements code via strict Red-Green-Refactor cycle. |
 | Documentation | Maintains `docs/` directory. |
 | Review | Pre-merge validation. Read-only. |
 

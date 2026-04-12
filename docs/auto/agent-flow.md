@@ -32,14 +32,14 @@ When users operate directly in GitHub, use this event mapping:
 
 ```mermaid
 flowchart TD
-    A([You describe what you need]) --> B[Orchestrator: create GitHub Issue + branch]
+    A([You describe what you need]) --> B[Orchestrate: create GitHub Issue + branch]
     B --> C[Research Agents: investigate in parallel]
-    C --> D[Orchestrator: synthesize findings + write plan]
+    C --> D[Orchestrate: synthesize findings + write plan]
     D --> G1{Gate 1: Plan Approval\n— main conversation —}
     G1 -- You approve --> SC{New project?}
-    SC -- Yes --> SCAF[TDD Agent: scaffold project]
+    SC -- Yes --> SCAF[Develop Agent: scaffold project]
     SC -- No --> E
-    SCAF --> E[TDD + Doc Agents: implement in parallel]
+    SCAF --> E[Develop + Doc Agents: implement in parallel]
     G1 -- You revise --> D
     E --> SR[Main conversation:\nset label to status/review]
     SR --> F[Review Agent: validate]
@@ -64,11 +64,11 @@ The main conversation drives the state machine. Agents are workers, not managers
 
 | Phase | Who runs it | What happens |
 |-------|------------|--------------|
-| 1. Init | Orchestrator agent | Creates GitHub Issue + branch, checks for duplicates |
+| 1. Init | Orchestrate agent | Creates GitHub Issue + branch, checks for duplicates |
 | 2. Research | Research agents (parallel) | Investigate codebase, docs, external, constraints |
-| 3. Synthesize + Plan | Orchestrator agent | Merges research, writes plan, presents Gate 1 |
+| 3. Synthesize + Plan | Orchestrate agent | Merges research, writes plan, presents Gate 1 |
 | 4. Gate 1 | Main conversation | User approves or revises the plan |
-| 5. Implement | TDD + Documentation agents (parallel) | Code via Red-Green-Refactor, update docs |
+| 5. Implement | Develop + Documentation agents (parallel) | Code via Red-Green-Refactor, update docs |
 | 6. Review | Review agent | Validates TDD compliance, quality, tests |
 | 7. Gate 2 | Main conversation | User approves merge or rejects with feedback |
 | 8. Merge | Main conversation | Merges branch, closes issue |
@@ -81,7 +81,7 @@ When invoking multiple agents for a phase:
 
 Parallelizable combinations:
 - **Research:** All research angles (codebase, docs, external, constraints) in parallel.
-- **Implementation:** TDD agent(s) + Documentation agent in parallel.
+- **Implementation:** Develop agent(s) + Documentation agent in parallel.
 - **Review:** Always sequential (needs implementation complete).
 
 ### Agent Scope Budgets
@@ -95,13 +95,13 @@ Each agent invocation should complete in one shot:
 | Documentation | ~10-15 | Update docs for one feature |
 | Review | ~15-20 | Validate one branch |
 
-If a TDD task requires multiple components, invoke **multiple TDD agents** (one per component) rather than asking one agent to do everything.
+If a task requires multiple components, invoke **multiple Develop agents** (one per component) rather than asking one agent to do everything.
 
 ### Scaffold Phase (New Projects)
 
 If this is the first implementation on the project (no `package.json` or build tool):
-1. Include scaffold instructions in the TDD agent prompt.
-2. The TDD agent sets up the project skeleton and commits as `chore(scaffold): ...`
+1. Include scaffold instructions in the Develop agent prompt.
+2. The Develop agent sets up the project skeleton and commits as `chore(scaffold): ...`
 3. TDD cycle (RED-GREEN-REFACTOR) begins AFTER the scaffold commit.
 
 This prevents conflating infrastructure setup with feature implementation.
@@ -130,7 +130,7 @@ You interact with the workflow at two gates. Agents cannot proceed past either o
 
 **When:** After implementation is complete, tests pass, and the Review Agent has signed off.
 
-**Prerequisite:** The issue **MUST have the `status/review` label** before Gate 2 is presented. This transition happens when all TDD agents have completed, all tests pass, and the Review Agent has been invoked. The main conversation updates the issue label to `status/review` before presenting this gate — this is a hard rule, not optional.
+**Prerequisite:** The issue **MUST have the `status/review` label** before Gate 2 is presented. This transition happens when all Develop agents have completed, all tests pass, and the Review Agent has been invoked. The main conversation updates the issue label to `status/review` before presenting this gate — this is a hard rule, not optional.
 
 **You see:**
 - Review Agent summary (what passed, any concerns)
@@ -170,11 +170,11 @@ Every piece of work is tracked as a GitHub Issue with status labels. Each issue 
 
 | Label | What's happening | Who's working |
 |-------|-----------------|---------------|
-| `status/draft` | Issue created. Problem described. | Orchestrator |
+| `status/draft` | Issue created. Problem described. | Orchestrate |
 | `status/researching` | Research Agents are investigating the problem. | Research Agents |
-| `status/planning` | Research is done. A plan is being written. | Orchestrator |
-| `status/ready` | Plan approved by you. Ready for implementation. | Orchestrator |
-| `status/in-progress` | Code is being written following TDD. | TDD + Doc Agents |
+| `status/planning` | Research is done. A plan is being written. | Orchestrate |
+| `status/ready` | Plan approved by you. Ready for implementation. | Orchestrate |
+| `status/in-progress` | Code is being written following TDD. | Develop + Doc Agents |
 | `status/review` | Implementation done. Being validated. | Review Agent |
 | `status/done` | Merged to `main`. Issue closed. | - |
 | `status/blocked` | Waiting on something external or your input. | Any agent |
@@ -192,7 +192,7 @@ stateDiagram-v2
     draft --> researching : Problem statement filled in
     researching --> planning : All research agents returned
     planning --> ready : You approve plan (Gate 1)
-    ready --> in_progress : TDD agents invoked
+    ready --> in_progress : Develop agents invoked
     in_progress --> review : All tasks done, tests pass
     review --> done : You approve merge (Gate 2)
     review --> researching : You reject (Gate 2) — retrospective written
@@ -226,7 +226,7 @@ stateDiagram-v2
 | `draft` | `researching` | Problem statement and description filled in | No |
 | `researching` | `planning` | All Research Agents returned findings | No |
 | `planning` | `ready` | Plan and acceptance criteria written | **Yes (Gate 1)** |
-| `ready` | `in-progress` | At least one TDD Agent invoked | No |
+| `ready` | `in-progress` | At least one Develop Agent invoked | No |
 | `in-progress` | `review` | All tasks done, all tests pass, docs updated | No |
 | `review` | `done` | Review passes, retrospective written, **label is `status/review`** | **Yes (Gate 2)** |
 | `review` | `researching` | You reject at Gate 2, retrospective captures learnings | **Yes (rejection)** |
@@ -234,14 +234,14 @@ stateDiagram-v2
 | `blocked` | Previous state | Blocking condition resolved | No |
 | Any active | `cancelled` | You decide to stop | **Yes** |
 
-**Critical rule:** The issue label MUST be updated to `status/review` BEFORE presenting Gate 2 to the user. This transition is performed by the main conversation when all TDD agents have completed and tests pass. The label `status/review` signals "awaiting human review." Skipping this transition is a workflow violation.
+**Critical rule:** The issue label MUST be updated to `status/review` BEFORE presenting Gate 2 to the user. This transition is performed by the main conversation when all Develop agents have completed and tests pass. The label `status/review` signals "awaiting human review." Skipping this transition is a workflow violation.
 
 ### Blocked Issues
 
 Any agent can mark an issue as blocked. When this happens:
 - A comment is added to the GitHub Issue (reason, what's blocking it, timestamp)
 - The label `status/blocked` replaces the current status label
-- The Orchestrator surfaces the block to you immediately
+- The Orchestrate agent surfaces the block to you immediately
 - When resolved, the issue returns to its previous status label and work continues
 
 ### Issue Structure
@@ -269,7 +269,7 @@ Six specialist agents handle different parts of the workflow. Their definitions 
 
 ### Issue Agent
 
-The Issue agent supports GitHub-native intake and planning when work starts from an issue instead of a local orchestrator session.
+The Issue agent supports GitHub-native intake and planning when work starts from an issue instead of a local orchestrate session.
 
 **What it does:**
 - Validates issue structure and required fields.
@@ -283,7 +283,7 @@ The Issue agent supports GitHub-native intake and planning when work starts from
 
 All agent prompts must be **fully self-contained** — the invoker provides exact issue numbers, branch names, acceptance criteria (verbatim), and file paths. Agents do not discover context from file references or placeholders. Each agent has a guard clause: if required context is missing, it stops and reports what's needed.
 
-### Orchestrator
+### Orchestrate
 
 Handles issue creation, research, and planning — Phases 1-3 of the workflow.
 
@@ -296,19 +296,19 @@ Handles issue creation, research, and planning — Phases 1-3 of the workflow.
 
 **What it does NOT do:** Implementation, review, Gate 2, or merge — the main conversation handles those phases directly.
 
-**Config:** `.github/agents/orchestrator.agent.md` | Model: Claude Opus 4 | Tools: read, edit, search, execute, agent, web, GitHub MCP server (via `"github/*"`, `"github-mcp-server/*"` tool patterns)
+**Config:** `.github/agents/orchestrate.agent.md` | Tools: read, edit, search, execute, agent, web, GitHub MCP server (via `"github/*"`, `"github-mcp-server/*"` tool patterns)
 
 ### Research Agent
 
-Investigates one specific angle of a problem. The Orchestrator (or main conversation) invokes 2-4 of these in parallel, each assigned a different strategy.
+Investigates one specific angle of a problem. The Orchestrate agent (or main conversation) invokes 2-4 of these in parallel, each assigned a different strategy.
 
 ```mermaid
 flowchart LR
-    O[Orchestrator] --> C[Codebase\nResearch]
+    O[Orchestrate] --> C[Codebase\nResearch]
     O --> D[Docs\nResearch]
     O --> E[External\nResearch]
     O --> F[Constraints\nResearch]
-    C --> S[Orchestrator\nSynthesizes]
+    C --> S[Orchestrate\nSynthesizes]
     D --> S
     E --> S
     F --> S
@@ -328,9 +328,9 @@ Each agent returns a structured report with key findings (cited with evidence), 
 
 **Config:** `.github/agents/research.agent.md` | Model: Claude Sonnet 4 | Tools: read, search, web (read-only — cannot modify files)
 
-### TDD Agent
+### Develop Agent
 
-Implements one component using strict Test-Driven Development. Each invocation targets one RED-GREEN-REFACTOR cycle (~15-20 tool calls). If a task requires multiple components, invoke multiple TDD agents.
+Implements one component using strict Test-Driven Development. Each invocation targets one RED-GREEN-REFACTOR cycle (~15-20 tool calls). If a task requires multiple components, invoke multiple Develop agents.
 
 ```mermaid
 flowchart LR
@@ -348,11 +348,11 @@ flowchart LR
 2. **GREEN** — Write the minimum code to make the test pass. No more. Commit: `feat: ... [GREEN]`
 3. **REFACTOR** — Clean up duplication, improve clarity. Tests must stay green after every change. Commit: `refactor: ... [REFACTOR]`
 
-**Scaffold handling:** For new projects (no `package.json` or build tool), the TDD agent sets up the project skeleton first and commits as `chore(scaffold): ...` before beginning the RED-GREEN-REFACTOR cycle.
+**Scaffold handling:** For new projects (no `package.json` or build tool), the Develop agent sets up the project skeleton first and commits as `chore(scaffold): ...` before beginning the RED-GREEN-REFACTOR cycle.
 
 If the agent discovers missing requirements, it logs a new GitHub Issue rather than scope-creeping.
 
-**Config:** `.github/agents/tdd.agent.md` | Model: Claude Sonnet 4 | Tools: read, edit, search, execute
+**Config:** `.github/agents/develop.agent.md` | Tools: read, edit, search, execute
 
 ### Documentation Agent
 
@@ -393,9 +393,9 @@ project-root/
 ├── .github/
 │   ├── copilot-instructions.md     # Copilot workspace instructions (auto-loaded)
 │   ├── agents/                     # Agent definitions
-│   │   ├── orchestrator.agent.md
+│   │   ├── orchestrate.agent.md
 │   │   ├── research.agent.md
-│   │   ├── tdd.agent.md
+│   │   ├── develop.agent.md
 │   │   ├── documentation.agent.md
 │   │   └── review.agent.md
 │   ├── hooks/                      # Copilot lifecycle hooks
@@ -521,11 +521,11 @@ Closes #42
 
 ## Getting Started
 
-1. **Start working:** Describe what you need. The Orchestrator agent creates a GitHub Issue, runs research, and writes a plan.
+1. **Start working:** Describe what you need. The `@orchestrate` agent creates a GitHub Issue, runs research, and writes a plan.
    ```
-   @orchestrator Add user authentication with JWT tokens
+   @orchestrate Add user authentication with JWT tokens
    ```
-   The Orchestrator handles init, research, and planning. The main conversation coordinates everything after Gate 1.
+   The `@orchestrate` agent handles init, research, and planning. The main conversation coordinates everything after Gate 1.
 
 2. **Check progress:** View GitHub Issues for the status of all work (filter by `status/*` labels).
 

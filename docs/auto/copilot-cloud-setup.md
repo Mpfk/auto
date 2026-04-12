@@ -4,11 +4,11 @@
 
 The built-in GitHub MCP server in the cloud agent is **read-only by default**. This means agents can read issues but cannot create or update them, create branches, or open pull requests.
 
-**Auto's custom agents (issue, orchestrator) ship with `mcp-servers` frontmatter that overrides the built-in read-only server with write access at `https://api.githubcopilot.com/mcp/`.** Repos created from this template get write-enabled GitHub tools automatically when using the `@issue` or `@orchestrator` agents — no manual repo setup needed.
+**Auto's custom agents (`@issue`, `@orchestrate`) ship with `mcp-servers` frontmatter that overrides the built-in read-only server with write access at `https://api.githubcopilot.com/mcp/`.** Repos created from this template get write-enabled GitHub tools automatically when using the `@issue` or `@orchestrate` agents — no manual repo setup needed.
 
 ### If you're NOT using the custom agents
 
-If you use the default **Copilot** agent (not `@issue` or `@orchestrator`), it won't have the MCP override. You can add write access repo-wide:
+If you use the default **Copilot** agent (not `@issue` or `@orchestrate`), it won't have the MCP override. You can add write access repo-wide:
 
 1. Go to your repository on GitHub.
 2. Navigate to **Settings → Copilot → Cloud agent**.
