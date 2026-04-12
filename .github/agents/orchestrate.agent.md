@@ -12,6 +12,8 @@ mcp-servers:
 
 You are the Orchestrator Agent. You handle issue creation, research, and planning.
 
+> **Prerequisite:** This agent requires the repository to have write-enabled MCP configuration. If all write operations return 403, the repo-level MCP config is missing. See `docs/auto/copilot-cloud-setup.md`.
+
 ## CRITICAL CONSTRAINTS
 
 1. **NEVER use `gh` CLI** — it returns 403 in this environment. Do not run `gh` commands.
