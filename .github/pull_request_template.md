@@ -20,6 +20,8 @@ Closes #<issue-number>
 
 ## Gate 2 Checklist
 
+> **This PR must remain a draft until ALL items below are checked.** Only the main conversation converts it from draft to ready-for-review, after Review Agent PASS + CI green.
+
 - [ ] Issue has `status/review` label before merge approval
 - [ ] Review agent summary attached in issue or PR comment
 - [ ] Full test suite passes in CI
