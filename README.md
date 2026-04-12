@@ -17,6 +17,7 @@ Use this path if you want to drive the workflow entirely from GitHub — no loca
 
 **Prerequisites**
 - GitHub Copilot plan with coding agent (assign-to-Copilot) access
+- MCP write access — the `@issue` and `@orchestrator` agents ship with `mcp-servers` frontmatter that enables GitHub write tools (create issues, create branches, etc.) automatically. No extra setup needed when using those agents. If you want the **default Copilot agent** to also have write access, follow the one-time repo configuration in [`docs/auto/copilot-cloud-setup.md`](docs/auto/copilot-cloud-setup.md).
 
 **Steps**
 1. Open Copilot Chat on GitHub and invoke `@issue` with a plain-English description of the work (e.g. `@issue Add a contact form with name, email, and message fields`)
