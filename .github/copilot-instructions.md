@@ -74,16 +74,16 @@ Use these event-driven transitions when users operate directly from GitHub:
 6. PR merged -> issue moved to `status/done` and closed.
 
 ### Phase 1: Init
-Invoke the **orchestrator** agent. It creates the GitHub Issue, checks for duplicates, and creates the feature branch. Returns when the issue is in `status/draft`.
+Invoke the **orchestrate** agent. It creates the GitHub Issue, checks for duplicates, and creates the feature branch. Returns when the issue is in `status/draft`.
 
 ### Phase 2: Research
-Invoke the **orchestrator** agent again (or invoke research agents directly). It updates status to `status/researching`, launches parallel research agents, synthesizes findings, and writes the plan. Returns when the plan and acceptance criteria are ready.
+Invoke the **orchestrate** agent again (or invoke research agents directly). It updates status to `status/researching`, launches parallel research agents, synthesizes findings, and writes the plan. Returns when the plan and acceptance criteria are ready.
 
 ### Phase 3: Gate 1 — Plan Approval
 **You handle this in the main conversation.** Present the research, plan, and acceptance criteria to the user. Update label to `status/ready` on approval. Revise if requested.
 
 ### Phase 4: Implement
-Update label to `status/in-progress`. Invoke **tdd** agents (one per independent task) and **documentation** agent in parallel. Each tdd agent receives fully materialized context (see "Spawning Agents" below). If this is the first implementation on the project (no package.json / no build tool), include scaffold instructions in the tdd agent prompt.
+Update label to `status/in-progress`. Invoke **develop** agents (one per independent task) and **documentation** agent in parallel. Each develop agent receives fully materialized context (see "Spawning Agents" below). If this is the first implementation on the project (no package.json / no build tool), include scaffold instructions in the develop agent prompt.
 
 ### Phase 5: Review
 Update issue label to `status/review`. Invoke the **review** agent with the issue number, branch, and acceptance criteria. Wait for it to complete. If it fails, fix issues and re-run.
@@ -116,11 +116,11 @@ Each agent invocation should complete in one shot:
 | Agent | Target tool calls | Scope |
 |-------|------------------|-------|
 | Research (per angle) | ~10 | One research strategy |
-| TDD (per component) | ~15-20 | One RED-GREEN-REFACTOR cycle |
+| Develop (per component) | ~15-20 | One RED-GREEN-REFACTOR cycle |
 | Documentation | ~10-15 | Update docs for one feature |
 | Review | ~15-20 | Validate one branch |
 
-If a TDD task requires multiple components, invoke **multiple tdd agents** rather than asking one to do everything.
+If a task requires multiple components, invoke **multiple develop agents** rather than asking one to do everything.
 
 ## Agents
 
@@ -129,9 +129,9 @@ Six specialist agents in `.github/agents/`:
 | Agent | Purpose | Invoked by |
 |-------|---------|------------|
 | `issue` | GitHub-native intake and planning. Runs duplicate checks, research fan-out, and writes plan + acceptance criteria for Gate 1. | Main conversation or GitHub Agent |
-| `orchestrator` | Creates GitHub Issues, runs research, synthesizes findings, writes plans. Handles init through Gate 1. | Main conversation |
-| `research` | Investigates one angle of a problem (codebase, docs, external, constraints). Multiple run in parallel. | Orchestrator or main conversation |
-| `tdd` | Implements one component via Red-Green-Refactor. | Main conversation |
+| `orchestrate` | Creates GitHub Issues, runs research, synthesizes findings, writes plans. Handles init through Gate 1. | Main conversation |
+| `research` | Investigates one angle of a problem (codebase, docs, external, constraints). Multiple run in parallel. | Orchestrate agent or main conversation |
+| `develop` | Implements one component via Red-Green-Refactor. | Main conversation |
 | `documentation` | Maintains `docs/` directory. Creates/updates docs, ADRs, README. | Main conversation |
 | `review` | Pre-merge validation. Checks TDD compliance, code quality, docs, tests. Read-only. | Main conversation |
 

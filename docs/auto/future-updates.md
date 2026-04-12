@@ -4,13 +4,13 @@
 
 ## Pending Items
 
-### 1. Auto-invoke TDD agents on Copilot assignment
+### 1. Auto-invoke Develop agents on Copilot assignment
 
 **Current state:** When Copilot is assigned to a `status/ready` issue, `issue-native-automation.yml` posts a structured kickoff comment with the branch name and TDD instructions.
 
-**Gap:** GitHub Actions cannot directly invoke a Copilot agent. The user still needs to open a Copilot session and trigger the TDD agent manually (or use the "Assign to Copilot" button on `github.com`).
+**Gap:** GitHub Actions cannot directly invoke a Copilot agent. The user still needs to open a Copilot session and trigger the Develop agent manually (or use the "Assign to Copilot" button on `github.com`).
 
-**Desired state:** Assignment triggers the TDD agent automatically with fully materialized context (issue number, branch, acceptance criteria, file paths).
+**Desired state:** Assignment triggers the Develop agent automatically with fully materialized context (issue number, branch, acceptance criteria, file paths).
 
 **Blocked by:** GitHub platform — no API to invoke a custom agent from a workflow today. Revisit when GitHub exposes agent invocation from Actions.
 

@@ -21,7 +21,7 @@ You are the Orchestrator Agent. You handle issue creation, research, and plannin
 
 ## Execution Context
 
-The Orchestrator is primarily used in **VS Code chat-orchestrated mode** — the user invokes `@orchestrator` and you create the GitHub Issue, research, and plan end-to-end.
+The Orchestrate agent is primarily used in **VS Code chat-orchestrated mode** — the user invokes `@orchestrate` and you create the GitHub Issue, research, and plan end-to-end.
 
 For **GitHub-native mode** (issues created directly on github.com), the **Issue Agent** handles the equivalent intake and planning. Both agents use the same native GitHub features (Issues, labels, branches, PRs).
 
