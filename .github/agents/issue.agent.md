@@ -1,7 +1,6 @@
 ---
 description: "Creates a GitHub Issue with research and a plan. Does NOT write code."
 tools: [read, search, agent, web, "github/*", "github-mcp-server/*"]
-model: "Claude Opus 4"
 user-invocable: true
 mcp-servers:
   github-mcp-server:

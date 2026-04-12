@@ -26,6 +26,8 @@ jobs:
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
 
       # ── Add your project's language tooling below ─────────────────────────
       # No authentication setup is needed — the Copilot cloud agent provides

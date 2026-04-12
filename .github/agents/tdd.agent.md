@@ -1,7 +1,6 @@
 ---
 description: "Implements code using strict Test-Driven Development (Red-Green-Refactor). Writes failing tests first, then minimal implementation, then refactors. Commits at each phase with Conventional Commits. Use when implementing a specific component or feature."
 tools: [read, edit, search, execute, "github/*", "github-mcp-server/*"]
-model: "Claude Sonnet 4"
 user-invocable: true
 mcp-servers:
   github-mcp-server:

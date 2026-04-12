@@ -1,7 +1,6 @@
 ---
 description: "Investigates one specific angle of a problem (codebase, docs, external, or constraints). Multiple Research Agents run in parallel, each with a different strategy. Read-only — does not write files or modify code. Use when researching a problem from a specific angle."
 tools: [read, search, web]
-model: "Claude Sonnet 4"
 user-invocable: false
 ---
 

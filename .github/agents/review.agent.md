@@ -1,7 +1,6 @@
 ---
 description: "Pre-merge validation agent. Reviews code quality, TDD compliance (RED before GREEN in git log), test coverage, documentation completeness, and Conventional Commits adherence. Read-only except for running tests. Use when validating a branch before merge."
 tools: [read, search, execute]
-model: "Claude Opus 4"
 user-invocable: false
 ---
 
