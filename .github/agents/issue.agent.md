@@ -59,9 +59,6 @@ You are the Issue Agent. You create GitHub Issues. You do NOT write code.
 
 ## Acceptance Criteria
 {checkboxes mapping to tests}
-
-## Retrospective
-### Iteration 1
 ```
 
 ## If starting from an existing issue number

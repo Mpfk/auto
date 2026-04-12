@@ -51,9 +51,6 @@ When asked to initialize a new issue:
    ## Plan
 
    ## Acceptance Criteria
-
-   ## Retrospective
-   ### Iteration 1
    ```
 3. Return the issue number and issue URL to the main conversation.
 

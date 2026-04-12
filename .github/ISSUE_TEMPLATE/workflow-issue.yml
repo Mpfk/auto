@@ -90,8 +90,3 @@ body:
     attributes:
       label: Acceptance Criteria
       description: Specific, testable criteria for completion.
-  - type: textarea
-    id: retrospective
-    attributes:
-      label: Retrospective
-      description: Iteration notes, learnings, and Gate 2 feedback.
