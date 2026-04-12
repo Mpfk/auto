@@ -1,6 +1,49 @@
 # Project Instructions
 
-This project uses a multi-agent software development workflow. Read `docs/auto/agent-flow.md` for the complete specification — it is the **source of truth** for all workflow rules, agent behaviors, and state transitions.
+This project uses a structured software development workflow. Every piece of work is tracked as a GitHub Issue, developed on its own branch, implemented test-first, and documented before it reaches `main`. See `docs/auto/agent-flow.md` for the full specification.
+
+## MANDATORY: Create a GitHub Issue Before Any Code
+
+**DO NOT write code, create branches, or open PRs until a GitHub Issue exists.**
+
+When a user asks you to build something, your FIRST action is to create a GitHub Issue — not to start coding. This applies in ALL contexts: VS Code, GitHub.com cloud agent, and any other environment.
+
+### Step-by-step (follow this exactly):
+
+1. **Check for duplicates.** List open issues and check for overlap.
+2. **Create the GitHub Issue** with these fields:
+   - **Title:** `<type>(<scope>): <description>` (Conventional Commits style)
+   - **Labels:** `["status/draft"]`
+   - **Body:** Use this template:
+     ```
+     ## Problem Statement
+     {what the user asked for}
+
+     ## Description
+     {details and context}
+
+     ## Research
+     ### Key Findings
+     ### Constraints
+     ### Open Questions
+
+     ## Plan
+
+     ## Acceptance Criteria
+
+     ## Retrospective
+     ### Iteration 1
+     ```
+3. **Create a feature branch** named `issue/{issue-number}` from `main`.
+4. **Research** the codebase and problem. Update the issue body with findings.
+5. **Write a plan** with independently testable tasks and acceptance criteria in the issue body.
+6. **Update issue labels** to `status/researching` → `status/planning` → `status/ready` as you progress.
+7. **Present the plan to the user** for approval before implementing.
+8. **Only after approval**, begin implementation on the `issue/{number}` branch using TDD.
+
+If you cannot create issues (missing tools or permissions), STOP and tell the user: "This workflow requires GitHub issue creation. See `docs/auto/copilot-cloud-setup.md` for setup instructions."
+
+**Never use branch names like `copilot/...`** — always use `issue/{number}`.
 
 ## Non-Negotiable Rules
 
