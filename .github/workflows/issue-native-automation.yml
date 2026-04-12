@@ -54,11 +54,16 @@ jobs:
             const owner = context.repo.owner;
             const repo = context.repo.repo;
             const issue = context.payload.issue;
-            const assignees = (issue.assignees || []).map((a) => a.login.toLowerCase());
-            const isCopilotAssigned = assignees.some((a) => a.includes('copilot'));
-            if (!isCopilotAssigned) return;
 
+            // Only act when Copilot itself was just assigned (not a co-assignee like the repo owner).
+            // Using context.payload.assignee (the specific person added in this event) prevents
+            // double-firing when the user assigns themselves and Copilot simultaneously.
+            const justAssigned = (context.payload.assignee?.login || '').toLowerCase();
+            if (!justAssigned.includes('copilot')) return;
+
+            // Idempotency guard: if implementation is already running, do nothing.
             const labels = (issue.labels || []).map((l) => l.name);
+            if (labels.includes('status/in-progress')) return;
             if (!labels.includes('status/ready')) {
               // Auto-promote if the plan looks filled in (Research + Plan sections present)
               const body = issue.body || '';
@@ -102,10 +107,14 @@ jobs:
               issue_number: issue.number,
               body: [
                 'Implementation kickoff:',
-                '- Use branch issue/' + issue.number,
+                '',
+                `> **IMPORTANT — branch:** The branch \`issue/${issue.number}\` has already been created.`,
+                '> Checkout **this existing branch** before making any commits.',
+                '> Do NOT create a new branch (e.g. `copilot/...`). Use `issue/' + issue.number + '` only.',
+                '',
                 '- Run TDD agent per independently testable task',
                 '- Keep docs updated in docs/',
-                '- Open PR to main when tasks are complete',
+                '- Open PR from `issue/' + issue.number + '` to `main` when tasks are complete',
               ].join('\n'),
             });
 
