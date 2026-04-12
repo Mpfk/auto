@@ -4,7 +4,19 @@
 
 ## Pending Items
 
-### 1. Auto-invoke Develop agents on Copilot assignment
+### 1. Allow Develop agent to invoke the Issue agent for out-of-scope discoveries
+
+**Current state:** When the Develop agent discovers missing requirements during implementation, the instructions say to "log them" by creating a GitHub Issue directly via the MCP server. The `develop.agent.md` tools list does not include `agent`, so it cannot invoke the `issue` agent as a sub-agent.
+
+**Gap:** The Develop agent cannot delegate structured intake (research, planning, acceptance criteria) to the Issue agent. Issue creation is flat — no research or plan packet is generated.
+
+**Desired state:** Add `agent` to the Develop agent's tools list so it can invoke `@issue` to create a properly researched and planned issue for any out-of-scope discovery, keeping the full workflow intact for follow-on work.
+
+**Action needed:** Add `agent` to `tools` in `.github/agents/develop.agent.md` and update the "If you discover missing requirements" instruction to invoke `@issue` instead of creating an issue directly.
+
+---
+
+### 2. Auto-invoke Develop agents on Copilot assignment
 
 **Current state:** When Copilot is assigned to a `status/ready` issue, `issue-native-automation.yml` posts a structured kickoff comment with the branch name and TDD instructions.
 
