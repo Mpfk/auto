@@ -2,7 +2,7 @@ name: PR Issue Sync
 
 on:
   pull_request:
-    types: [opened, reopened, synchronize, ready_for_review, closed]
+    types: [opened, reopened, synchronize, ready_for_review, review_requested, closed]
 
 permissions:
   issues: write
@@ -23,10 +23,19 @@ jobs:
             const action = context.payload.action;
 
             const branch = pr.head.ref;
-            const match = /^issue\/(\d+)$/.exec(branch);
-            if (!match) return;
 
-            const issue_number = Number(match[1]);
+            // Prefer issue/{N} branch name; fall back to "Closes #N" in title/body.
+            // This handles the Copilot SWE agent which always creates copilot/... branches.
+            let issue_number;
+            const branchMatch = /^issue\/(\d+)$/.exec(branch);
+            if (branchMatch) {
+              issue_number = Number(branchMatch[1]);
+            } else {
+              const prText = `${pr.title}\n\n${pr.body || ''}`;
+              const bodyMatch = /closes\s+#(\d+)/i.exec(prText);
+              if (!bodyMatch) return;
+              issue_number = Number(bodyMatch[1]);
+            }
 
             const setStatus = async (next) => {
               const issue = (await github.rest.issues.get({ owner, repo, issue_number })).data;
@@ -52,6 +61,11 @@ jobs:
                 issue_number,
                 body: 'PR is ready for review. Invoke the review agent and complete Gate 2 before merge.',
               });
+              return;
+            }
+
+            if (action === 'review_requested') {
+              await setStatus('status/review');
               return;
             }
 
