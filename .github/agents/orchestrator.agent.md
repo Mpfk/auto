@@ -1,7 +1,6 @@
 ---
 description: "Creates GitHub Issues, runs research, synthesizes findings, and writes plans. Handles the workflow from init through Gate 1 (plan approval). Use when starting new work, creating issues, or running research and planning phases."
 tools: [read, edit, search, execute, agent, web, "github/*", "github-mcp-server/*"]
-model: "Claude Opus 4"
 mcp-servers:
   github-mcp-server:
     type: http

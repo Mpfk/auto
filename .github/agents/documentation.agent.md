@@ -1,7 +1,6 @@
 ---
 description: "Creates and maintains project documentation in docs/. Updates architecture docs, API specs, ADRs, and README.md. Enforces the docs-in-docs/ convention. Use when documentation needs updating after implementation."
 tools: [read, edit, search, execute]
-model: "Claude Sonnet 4"
 user-invocable: false
 ---
 
