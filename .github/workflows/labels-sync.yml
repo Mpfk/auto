@@ -2,11 +2,6 @@ name: Label Sync
 
 on:
   workflow_dispatch:
-  push:
-    branches: [main]
-    paths:
-      - .github/labels.yml
-      - .github/workflows/labels-sync.yml
 
 permissions:
   issues: write
