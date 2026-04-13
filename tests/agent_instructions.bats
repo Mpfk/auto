@@ -192,6 +192,11 @@ CI_GATE="$REPO_ROOT/.github/workflows/ci-issue-gate.yml"
   grep -q "Invoke Copilot 'review' Agent" "$CI_GATE"
 }
 
+@test "ci-issue-gate.yml: excludes own workflow run from check evaluation" {
+  grep -q "ownRunToken" "$CI_GATE"
+  grep -q "details.includes(ownRunToken)" "$CI_GATE"
+}
+
 @test "pr-issue-sync.yml: merge completion comment includes gate closeout" {
   grep -q "Gate 2 complete" "$PR_SYNC"
 }

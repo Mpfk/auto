@@ -59,7 +59,11 @@ jobs:
             };
 
             const checks = await github.rest.checks.listForRef({ owner, repo, ref: pr.head.sha, per_page: 100 });
-            const runs = checks.data.check_runs || [];
+            const ownRunToken = `/runs/${run.id}/`;
+            const runs = (checks.data.check_runs || []).filter((r) => {
+              const details = r.details_url || r.html_url || '';
+              return !details.includes(ownRunToken);
+            });
             if (runs.length === 0) return;
 
             const blocking = runs.filter((r) => r.status !== 'completed');
