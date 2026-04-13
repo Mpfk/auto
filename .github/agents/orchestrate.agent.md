@@ -82,6 +82,7 @@ When asked to research and plan (the issue already exists):
 8. Present the research, plan, and acceptance criteria to the user for Gate 1 approval.
    - If the user requests changes, revise and re-present.
    - If the user answers open questions, incorporate into research.
+   - Use explicit wording for the decision prompt: **"Gate 1: Approve this plan to move the issue to status/ready?"**
 9. On approval, **update labels** to `status/ready` using `issue_write` with `method: "update"`.
 10. Return to the main conversation with: issue number, branch name, the plan, and acceptance criteria.
 
@@ -91,7 +92,10 @@ When asked to begin implementation (after Gate 1 approval):
 
 1. **Set issue to `status/ready`** and rely on native automation to create `issue/{issue-number}` branch.
 2. **Do not directly set `status/in-progress`** when native assignment automation is available.
-3. Ask the user to assign Copilot in GitHub UI. Assignment triggers native move to `status/in-progress`.
+3. Ask the user: **"Issue is ready. Would you like me to assign the Copilot 'develop' Agent to begin work?"**
+   - If yes: assign Copilot in GitHub UI (or via native assignment tooling when available).
+   - Assignment triggers native move to `status/in-progress`.
+   - If no: keep status as `status/ready` and remind the user this is waiting at implementation handoff.
 4. **Fallback only if native automation is unavailable:**
     - Create branch `issue/{issue-number}` using `create_branch`.
     - Update label to `status/in-progress`.

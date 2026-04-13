@@ -58,6 +58,12 @@ jobs:
 
             if (action === 'closed' && pr.merged) {
               await setStatus('status/done');
+              await github.rest.issues.createComment({
+                owner,
+                repo,
+                issue_number,
+                body: 'Gate 2 complete: PR merged. Status moved to status/done. Next step: no action required unless follow-up work is needed.',
+              });
               await github.rest.issues.update({ owner, repo, issue_number, state: 'closed' });
               await github.rest.git.deleteRef({ owner, repo, ref: `heads/${branch}` }).catch(() => {});
             }

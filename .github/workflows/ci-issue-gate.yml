@@ -79,7 +79,7 @@ jobs:
                 repo,
                 issue_number,
                 body: [
-                  'CI checks failed. Status set to status/in-progress.',
+                  'Gate check failed: CI checks are not green. Status set to status/in-progress.',
                   '',
                   'Failed checks:',
                   failedNames,
@@ -87,7 +87,9 @@ jobs:
                   `PR: #${pr.number}`,
                   `Head SHA: ${pr.head.sha}`,
                   '',
-                  'Re-invoke the develop agent with the failure output and prior retrospective context.',
+                  'Next:',
+                  "- Re-invoke Copilot 'develop' Agent with the failure output and prior retrospective context.",
+                  '- Keep PR in draft until CI is green and review prerequisites are satisfied.',
                 ].join('\n'),
               });
               return;
@@ -100,11 +102,12 @@ jobs:
                 repo,
                 issue_number,
                 body: [
-                  'CI checks are green on the draft PR. Status moved to status/review.',
+                  'Review kickoff: CI checks are green on the draft PR. Status moved to status/review.',
                   '',
                   'Next:',
-                  '- Invoke the review agent and confirm PASS.',
+                  "- Invoke Copilot 'review' Agent and confirm PASS.",
                   '- Keep PR as draft until Gate 2 prerequisites are satisfied.',
+                  '- After PASS, convert PR to ready-for-review and proceed to Gate 2 merge approval.',
                 ].join('\n'),
               });
             }

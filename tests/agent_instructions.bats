@@ -20,6 +20,10 @@ DEVELOP="$REPO_ROOT/.github/agents/develop.agent.md"
   grep -q "Phase C: Implementation Handoff" "$ORCHESTRATE"
 }
 
+@test "orchestrate.agent.md: asks whether to assign Copilot develop agent" {
+  grep -q "Would you like me to assign the Copilot 'develop' Agent to begin work" "$ORCHESTRATE"
+}
+
 # Test 3: copilot-instructions.md does NOT have "Create a feature branch" as step 3
 @test "copilot-instructions.md: branch creation is not step 3 in step-by-step" {
   # Step 3 should NOT be "Create a feature branch"
@@ -105,6 +109,10 @@ CI_GATE="$REPO_ROOT/.github/workflows/ci-issue-gate.yml"
   grep -q "Fallback" "$ISSUE_AGENT"
 }
 
+@test "issue.agent.md: ready handoff references Copilot develop agent" {
+  grep -q "Assign to Copilot 'develop' Agent to begin work" "$ISSUE_AGENT"
+}
+
 # Test: orchestrate.agent.md uses correct MCP tool names (no old names)
 @test "orchestrate.agent.md: no references to deprecated create_issue tool name" {
   run grep -w "create_issue" "$ORCHESTRATE"
@@ -123,6 +131,10 @@ CI_GATE="$REPO_ROOT/.github/workflows/ci-issue-gate.yml"
 
 @test "orchestrate.agent.md: references issue_write tool" {
   grep -q "issue_write" "$ORCHESTRATE"
+}
+
+@test "orchestrate.agent.md: includes explicit Gate 1 decision wording" {
+  grep -q "Gate 1: Approve this plan to move the issue to status/ready" "$ORCHESTRATE"
 }
 
 # Test: issue-state-guard.yml no longer auto-advances draft -> ready (3A)
@@ -165,4 +177,21 @@ CI_GATE="$REPO_ROOT/.github/workflows/ci-issue-gate.yml"
 @test "ci-issue-gate.yml: exists and sets status/review" {
   grep -q "name: CI Issue Gate" "$CI_GATE"
   grep -q "status/review" "$CI_GATE"
+}
+
+@test "issue-native-automation.yml: ready comment mentions Copilot develop agent" {
+  grep -q "Assign to Copilot 'develop' Agent to begin work" "$ISSUE_NATIVE"
+}
+
+@test "issue-native-automation.yml: plan approved comment includes next step" {
+  grep -q "Gate 1 approved" "$ISSUE_NATIVE"
+}
+
+@test "ci-issue-gate.yml: review kickoff comment includes next-step instructions" {
+  grep -q "Review kickoff" "$CI_GATE"
+  grep -q "Invoke Copilot 'review' Agent" "$CI_GATE"
+}
+
+@test "pr-issue-sync.yml: merge completion comment includes gate closeout" {
+  grep -q "Gate 2 complete" "$PR_SYNC"
 }

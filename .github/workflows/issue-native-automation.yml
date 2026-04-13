@@ -46,7 +46,7 @@ jobs:
               owner,
               repo,
               issue_number: issue.number,
-              body: `Branch ready: ${branch}. Assign Copilot to this issue to begin implementation.`
+              body: `Issue is ready. Branch ready: ${branch}. Assign to Copilot 'develop' Agent to begin work.`
             });
 
       - name: Move to in-progress when Copilot is assigned on ready issue
@@ -72,7 +72,7 @@ jobs:
                 owner,
                 repo,
                 issue_number: issue.number,
-                body: 'Copilot assignment detected, but issue is not status/ready. Approve the plan first before assigning Copilot.',
+                body: 'Copilot assignment detected, but issue is not status/ready. Next step: complete Gate 1 plan approval first, then assign to Copilot \'develop\' Agent.',
               });
               return;
             }
@@ -100,6 +100,7 @@ jobs:
                 `> **IMPORTANT — branch:** The branch \`issue/${issue.number}\` has already been created.`,
                 '> Checkout **this existing branch** before making any commits.',
                 '> Do NOT create a new branch (e.g. `copilot/...`). Use `issue/' + issue.number + '` only.',
+                '> Copilot `develop` agent is now the implementation worker for this issue.',
                 '',
                 '- Run TDD agent per independently testable task',
                 '- Keep docs updated in docs/',
@@ -176,6 +177,6 @@ jobs:
                 owner,
                 repo,
                 issue_number: issue.number,
-                body: `Plan approved by @${actor}. Status moved to status/ready.`,
+                body: `Gate 1 approved by @${actor}. Status moved to status/ready. Next step: assign to Copilot 'develop' Agent to begin work.`,
               });
             }
