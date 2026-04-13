@@ -53,19 +53,3 @@ Same root cause — the MCP server is still in read-only mode. Configure write a
 The built-in MCP server is read-only. Verify the repo-level MCP configuration is set correctly.
 
 To confirm the setup file is valid, run it manually: **Actions → Copilot Setup Steps → Run workflow**. It should complete without errors.
-
-## Native Automation Workflows
-
-This template includes GitHub-native automation workflows:
-
-- `.github/workflows/issue-state-guard.yml` normalizes and validates status labels.
-- `.github/workflows/issue-native-automation.yml` reacts to issue labels, assignment, and slash commands.
-- `.github/workflows/pr-issue-sync.yml` syncs issue status from PR lifecycle events.
-
-These workflows are event-driven and run in standard GitHub Actions. They complement, not replace, Copilot cloud setup steps.
-
-For repository guardrails:
-
-- The `Repo Setup` workflow runs automatically on every push to `main`.
-- It syncs labels and applies branch protection using `GITHUB_TOKEN` — no additional secrets required.
-- To trigger manually: GitHub Actions → `Repo Setup` → `Run workflow`.

@@ -1,130 +1,110 @@
 # Auto — Multi-Agent Software Development Template
 
-A reusable project template that enforces structured software development through specialized GitHub Copilot agents, test-driven development, GitHub Issues for project management, and automated git hooks + GitHub Actions.
+A project template that structures development using specialized GitHub Copilot agents, test-driven development, and GitHub Issues.
 
 ## Quick Start
 
 1. Clone this template into your new project
-2. Start working by invoking the Orchestrate agent in Copilot Chat: `@orchestrate`
-
-## How To Use
-
-Choose the path that matches how you're running the workflow:
-
-### Native GitHub Mode
-
-Use this path if you want to drive the workflow entirely from GitHub — no local IDE required.
-
-**Prerequisites**
-- GitHub Copilot plan with coding agent (assign-to-Copilot) access
-- MCP write access — **required for every repo created from this template.** Follow the one-time repo configuration in [`docs/auto/copilot-cloud-setup.md`](docs/auto/copilot-cloud-setup.md) (Settings → Copilot → Cloud agent) to grant write permissions. Without this, agents cannot create issues, open branches, or update pull requests.
-
-**Steps**
-1. Open Copilot Chat on GitHub and invoke `@issue` with a plain-English description of the work (e.g. `@issue Add a contact form with name, email, and message fields`)
-2. Review the plan the Issue Agent posts as an issue comment
-3. Assign **Copilot** to the issue (GitHub web UI) — implementation starts on a `issue/{number}` branch
-4. When checks pass and the PR is ready, the Review Agent validates automatically; review the summary
-5. Approve the merge — the branch merges to `main`, the issue closes, and the feature branch is deleted
-
----
-
-### Developer Instance (VS Code)
-
-Use this path if you're working locally in VS Code with GitHub Copilot Chat.
-
-**Prerequisites**
-- VS Code with the [GitHub Copilot Chat](https://marketplace.visualstudio.com/items?itemName=GitHub.copilot-chat) extension
-- Repository cloned locally
-- Git hooks activated: run `git config core.hooksPath .githooks` once after cloning
-- GitHub CLI authenticated: `gh auth login`
-
-**Invoking agents**
-
-Open the Copilot Chat panel and type the agent name to start:
-
-| What you want | Command |
-|---|---|
-| Start new work from a description | `@issue Add a contact form with name and email` |
-| Start new work with full orchestration | `@orchestrate` |
-| Re-plan an existing issue | `@issue 42` |
-
-The agent drives the workflow — creating the issue, running research, writing a plan, and presenting it for your approval. You stay in control at two gates: plan approval and merge approval.
+2. Configure MCP write access — **required once per repo:** [`docs/auto/copilot-cloud-setup.md`](docs/auto/copilot-cloud-setup.md)
+3. Start working:
+   - **From GitHub:** Open Copilot Chat → `@issue Add a contact form`
+   - **From VS Code:** Open Copilot Chat → `@orchestrate`
 
 ## How It Works
 
-The `@orchestrate` agent manages the full development lifecycle in chat-driven mode:
+You describe what you need. Agents handle research, planning, implementation, and review. You approve the plan and the merge — everything else is automated.
 
-1. You describe what you need (feature, bug fix, refactor)
-2. It creates a GitHub Issue, spawns Research Agents in parallel, synthesizes findings, and writes a plan
-3. You approve the plan (Gate 1)
-4. `@develop` and Documentation Agents implement the work on a feature branch
-5. The Review Agent validates everything
-6. You approve the merge (Gate 2)
+```mermaid
+flowchart TD
+    A([You describe what you need]) --> B[Orchestrate: create GitHub Issue]
+    B --> C[Research Agents: investigate in parallel]
+    C --> D[Synthesize findings + write plan]
+    D --> G1{Gate 1\nPlan Approval}
+    G1 -- Approve --> E[Develop + Doc Agents: implement]
+    G1 -- Revise --> D
+    E --> CI{CI checks\npass?}
+    CI -- Fail --> E
+    CI -- Pass --> F[Review Agent: validate]
+    F -- Issues found --> E
+    F -- PASS --> G2{Gate 2\nMerge Approval}
+    G2 -- Approve --> M([Merge to main])
+    G2 -- Reject --> C
 
-The template also supports a GitHub-native mode where issue labels, assignees, and PR events drive the same lifecycle without requiring the full orchestration session in a local VM.
+    style G1 fill:#ff6b6b,color:#fff,stroke:#c0392b
+    style G2 fill:#ff6b6b,color:#fff,stroke:#c0392b
+    style M fill:#2ecc71,color:#fff,stroke:#27ae60
+```
 
-See [`docs/auto/agent-flow.md`](docs/auto/agent-flow.md) for the complete workflow specification.
+Every piece of work is tracked as a GitHub Issue, developed on its own `issue/{number}` branch, implemented test-first, and documented before reaching `main`. You stay in control at two gates: the plan and the merge.
+
+## Setup
+
+### Required: MCP Write Access
+
+Agents need write access to create issues, branches, and pull requests. This is a one-time setting per repository.
+
+→ Follow [**`docs/auto/copilot-cloud-setup.md`**](docs/auto/copilot-cloud-setup.md)
+
+### GitHub-Native Mode
+
+Drive the workflow entirely from GitHub — no local IDE required.
+
+**Prerequisites:**
+- GitHub Copilot with coding agent (assign-to-Copilot) access
+- MCP write access configured (see above)
+
+**Steps:**
+1. Open Copilot Chat on GitHub → `@issue <description>`
+2. Review the plan the Issue Agent posts as an issue comment and approve it
+3. Assign **Copilot** to the issue — implementation starts on `issue/{number}`
+4. When CI passes, the Review Agent validates automatically
+5. Approve the merge — branch merges to `main` and the issue closes
+
+### VS Code Mode
+
+**Prerequisites:**
+- [GitHub Copilot Chat](https://marketplace.visualstudio.com/items?itemName=GitHub.copilot-chat) extension installed
+- Repository cloned locally
+- MCP write access configured (see above)
+- Git hooks activated (run once after cloning): `git config core.hooksPath .githooks`
+
+**Steps:**
+1. Open Copilot Chat → `@orchestrate`
+2. Describe what you need — the agent creates a GitHub Issue, runs research, and writes a plan
+3. Approve the plan (Gate 1)
+4. Agents implement the work on a feature branch
+5. Review the output and approve the merge (Gate 2)
+
+## Configuration
+
+`workflow.conf` is auto-detected from your project on first use (reads `package.json`, `pyproject.toml`, `go.mod`, `Cargo.toml`, etc.). Edit manually only if auto-detection doesn't match your setup.
+
+## Agents
+
+| Agent | Purpose |
+|-------|---------|
+| `@issue` | GitHub-native intake: research, planning, and Gate 1 prep |
+| `@orchestrate` | VS Code entry point: creates issue, runs research, writes plan |
+| `@develop` | Implements one component via Red-Green-Refactor |
+| `@documentation` | Maintains `docs/` |
+| `@review` | Pre-merge validation (read-only) |
 
 ## Project Structure
 
 ```
-├── workflow.conf           # Project-specific config (test cmd, dirs)
+├── workflow.conf               # Test command, source/test directories
 ├── .github/
-│   ├── copilot-instructions.md  # Copilot workspace instructions
-│   ├── agents/             # Agent definitions (.agent.md)
-│   ├── hooks/              # Copilot lifecycle hooks
-│   ├── workflows/          # GitHub Actions CI
-│   └── ISSUE_TEMPLATE/     # Structured issue template
-├── .githooks/              # Git hook enforcement scripts
-├── docs/                   # All project documentation
-│   ├── decisions/          # Architecture Decision Records
-│   └── api/                # API specifications
-├── src/                    # Source code
-└── tests/                  # Test files
+│   ├── copilot-instructions.md # Workspace instructions (auto-loaded by Copilot)
+│   ├── agents/                 # Agent definitions (.agent.md files)
+│   ├── workflows/              # GitHub Actions CI
+│   └── ISSUE_TEMPLATE/         # Structured issue template
+├── .githooks/                  # Git hook enforcement (local dev)
+├── docs/                       # All project documentation
+├── src/                        # Source code
+└── tests/                      # Test files
 ```
 
-## Using This Template
-
-### For a new project
-
-```bash
-# Clone the template
-git clone <template-repo-url> my-new-project
-cd my-new-project
-
-# Invoke the Orchestrate agent to start your first issue
-# In VS Code Copilot Chat: @orchestrate
-```
-
-For local development with git hook enforcement, run `git config core.hooksPath .githooks` once after cloning. This is not required for GitHub-native (cloud agent) mode.
-
-### Configuration
-
-`workflow.conf` is auto-configured on first use. The `@orchestrate` agent detects your project's test runner from standard marker files (`package.json`, `pyproject.toml`, `go.mod`, `Cargo.toml`, etc.) and writes the detected value back to `workflow.conf`. You only need to edit it manually if auto-detection doesn't match your setup.
-
-### Agents
-
-| Agent | Purpose |
-|-------|---------|
-| Issue | GitHub-native intake. Creates or normalizes issue structure, runs research and planning, prepares `status/ready`. |
-| Orchestrate | Entry point. Creates GitHub Issues, manages workflow, delegates to agents, enforces approval gates. |
-| Research | Investigates one angle of a problem. Runs 2-4 in parallel. |
-| Develop | Implements code via strict Red-Green-Refactor cycle. |
-| Documentation | Maintains `docs/` directory. |
-| Review | Pre-merge validation. Read-only. |
-
-## Documentation
-
-All project documentation lives in `docs/`. This README provides only the overview and setup steps.
+## Docs
 
 - [`docs/auto/agent-flow.md`](docs/auto/agent-flow.md) — Complete workflow specification, state machine, and agent reference
-- [`docs/auto/copilot-cloud-setup.md`](docs/auto/copilot-cloud-setup.md) — **Required** setup guide for MCP write access (Settings → Copilot → Cloud agent); also covers language tooling and copilot-setup-steps.yml
-
-## Repository Guardrails
-
-Setup is automatic. The `Repo Setup` workflow runs on every push to `main` and:
-
-1. Creates/syncs all status and type labels from `.github/labels.yml`.
-2. Applies branch protection rules to `main` (required checks, PR reviews, no force-push).
-
-No secrets or manual steps are required. To re-run manually: GitHub Actions → `Repo Setup` → `Run workflow`.
+- [`docs/auto/copilot-cloud-setup.md`](docs/auto/copilot-cloud-setup.md) — MCP write access setup and language tooling
