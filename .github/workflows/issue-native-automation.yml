@@ -68,30 +68,16 @@ jobs:
             const labels = (issue.labels || []).map((l) => l.name);
             if (labels.includes('status/in-progress')) return;
             if (!labels.includes('status/ready')) {
-              // Auto-promote if the plan looks filled in (Research + Plan sections present)
-              const body = issue.body || '';
-              const hasPlan = body.includes('## Plan') && body.includes('## Acceptance Criteria');
-              const hasResearch = /### Key Findings\s+[^#\s]/.test(body);
-              if (hasPlan && hasResearch) {
-                // Plan is present but label wasn't updated — auto-promote
-                const toRemove = labels.filter(l => l.startsWith('status/'));
-                for (const l of toRemove) {
-                  await github.rest.issues.removeLabel({ owner, repo, issue_number: issue.number, name: l }).catch(() => {});
-                }
-                await github.rest.issues.addLabels({ owner, repo, issue_number: issue.number, labels: ['status/ready'] });
-              } else {
-                await github.rest.issues.createComment({
-                  owner,
-                  repo,
-                  issue_number: issue.number,
-                  body: 'Copilot assignment detected, but issue is not status/ready and no plan was found. Invoke the `@issue` agent to research and plan first.',
-                });
-                return;
-              }
+              await github.rest.issues.createComment({
+                owner,
+                repo,
+                issue_number: issue.number,
+                body: 'Copilot assignment detected, but issue is not status/ready. Approve the plan first before assigning Copilot.',
+              });
+              return;
             }
 
-            // Re-fetch current labels to handle both normal and auto-promote paths,
-            // then remove all status/* labels before adding status/in-progress.
+            // Re-fetch current labels, then remove all status/* labels before adding status/in-progress.
             const current = await github.rest.issues.listLabelsOnIssue({ owner, repo, issue_number: issue.number });
             const statusLabels = current.data.filter(l => l.name.startsWith('status/')).map(l => l.name);
             for (const l of statusLabels) {
@@ -136,8 +122,45 @@ jobs:
 
             const body = (context.payload.comment?.body || '').trim().toLowerCase();
             const actor = context.payload.comment?.user?.login || 'unknown';
+            const association = context.payload.comment?.author_association || 'NONE';
+            const allowedAssociations = new Set(['OWNER', 'MEMBER']);
 
             if (body === '/auto plan-approved') {
+              if (!allowedAssociations.has(association)) {
+                await github.rest.issues.createComment({
+                  owner,
+                  repo,
+                  issue_number: issue.number,
+                  body: `Plan approval command ignored: @${actor} is not a maintainer (${association}).`,
+                });
+                return;
+              }
+
+              const statusNames = (issue.labels || []).map((l) => l.name).filter((n) => n.startsWith('status/'));
+              if (!(statusNames.includes('status/planning') || statusNames.includes('status/researching'))) {
+                await github.rest.issues.createComment({
+                  owner,
+                  repo,
+                  issue_number: issue.number,
+                  body: `Plan approval command ignored: current status must be status/planning or status/researching. Current: ${statusNames.join(', ') || 'none'}.`,
+                });
+                return;
+              }
+
+              const issueBody = issue.body || '';
+              const hasResearch = /### Key Findings\s+[^#\s]/.test(issueBody);
+              const hasPlan = issueBody.includes('## Plan') && /## Plan\s+[^#\s]/.test(issueBody);
+              const hasCriteria = issueBody.includes('## Acceptance Criteria') && /## Acceptance Criteria\s+[^#\s]/.test(issueBody);
+              if (!(hasResearch && hasPlan && hasCriteria)) {
+                await github.rest.issues.createComment({
+                  owner,
+                  repo,
+                  issue_number: issue.number,
+                  body: 'Plan approval command ignored: issue body must include completed Research, Plan, and Acceptance Criteria sections.',
+                });
+                return;
+              }
+
               const current = await github.rest.issues.listLabelsOnIssue({ owner, repo, issue_number: issue.number });
               const statusLabels = current.data.filter(l => l.name.startsWith('status/')).map(l => l.name);
               for (const l of statusLabels) {

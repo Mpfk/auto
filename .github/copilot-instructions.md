@@ -35,8 +35,9 @@ When a user asks you to build something, your FIRST action is to create a GitHub
 4. **Write a plan** with independently testable tasks and acceptance criteria in the issue body.
 5. **Update issue labels** to `status/researching` → `status/planning` → `status/ready` as you progress.
 6. **Present the plan to the user** for approval before implementing.
-7. **After plan approval**, create a feature branch named `issue/{issue-number}` from `main` and set label to `status/in-progress`.
-8. **Only after approval**, begin implementation on the `issue/{number}` branch using TDD.
+7. **After plan approval**, set issue label to `status/ready`.
+8. **Use native automation for implementation kickoff**: branch `issue/{issue-number}` is created and status moves to `status/in-progress` when Copilot is assigned. If automation is unavailable, do this manually.
+9. **Only after approval**, begin implementation on the `issue/{number}` branch using TDD.
 
 If you cannot create issues (missing tools or permissions), STOP and tell the user: "This workflow requires GitHub issue creation. See `docs/auto/copilot-cloud-setup.md` for setup instructions."
 
@@ -82,7 +83,7 @@ Invoke the **orchestrate** agent again (or invoke research agents directly). It 
 **You handle this in the main conversation.** Present the research, plan, and acceptance criteria to the user. Update label to `status/ready` on approval. Revise if requested.
 
 ### Phase 4: Implement
-Update label to `status/in-progress`. Invoke **develop** agents (one per independent task) and **documentation** agent in parallel. Each develop agent receives fully materialized context (see "Spawning Agents" below). If this is the first implementation on the project (no package.json / no build tool), include scaffold instructions in the develop agent prompt.
+Use native automation to move to `status/in-progress` when Copilot is assigned on a `status/ready` issue. Invoke **develop** agents (one per independent task) and **documentation** agent in parallel. Each develop agent receives fully materialized context (see "Spawning Agents" below). If this is the first implementation on the project (no package.json / no build tool), include scaffold instructions in the develop agent prompt.
 
 After each RED-GREEN-REFACTOR cycle the Develop Agent posts a `## Retrospective — Iteration N` comment to the issue (and PR if one exists), where N is determined by counting prior `## Retrospective — Iteration` comments on the issue. This applies to every invocation — not only on CI failure.
 
@@ -91,7 +92,7 @@ Open a **draft** PR from `issue/{number}` → `main` once the first commit is pu
 ### Phase 5: Review
 Before invoking the Review Agent: verify CI checks are green on the PR. If CI checks fail, re-invoke the **develop** agent with the exact failure output and the retrospective from the last develop agent run — do not proceed to the Review Agent until CI is green.
 
-Once CI is green, update issue label to `status/review`. **Do not update the label or invoke the Review Agent while CI is failing.** Invoke the **review** agent with the issue number, branch, and acceptance criteria. Wait for it to complete. If it fails, fix issues and re-run.
+Once CI is green on a draft PR, native automation sets issue label `status/review`. **Do not invoke the Review Agent while CI is failing.** Invoke the **review** agent with the issue number, branch, and acceptance criteria. Wait for it to complete. If it fails, fix issues and re-run.
 
 When the Review Agent returns PASS and CI is confirmed green: convert the PR from **draft to ready-for-review**. This is the only point at which the PR draft state is lifted.
 

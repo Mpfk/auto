@@ -2,7 +2,7 @@ name: PR Issue Sync
 
 on:
   pull_request:
-    types: [opened, reopened, synchronize, ready_for_review, review_requested, closed]
+    types: [opened, reopened, synchronize, closed]
 
 permissions:
   issues: write
@@ -53,22 +53,6 @@ jobs:
 
             if (["opened", "reopened", "synchronize"].includes(action)) {
               await setStatus('status/in-progress');
-              return;
-            }
-
-            if (action === 'ready_for_review') {
-              await setStatus('status/review');
-              await github.rest.issues.createComment({
-                owner,
-                repo,
-                issue_number,
-                body: 'PR is ready for review. Invoke the review agent and complete Gate 2 before merge.',
-              });
-              return;
-            }
-
-            if (action === 'review_requested') {
-              await setStatus('status/review');
               return;
             }
 

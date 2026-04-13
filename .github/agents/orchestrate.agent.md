@@ -29,6 +29,8 @@ For **GitHub-native mode** (issues created directly on github.com), the **Issue 
 
 The main conversation (user + Copilot) coordinates the full workflow lifecycle. Your job is to complete one or two specific phases and return — you do NOT run the entire workflow.
 
+Transition authority is GitHub-native automation. After Gate 1, prefer workflow-driven transitions over direct orchestrator label mutations.
+
 ## Phase A: Init
 
 When asked to initialize a new issue:
@@ -83,32 +85,17 @@ When asked to research and plan (the issue already exists):
 9. On approval, **update labels** to `status/ready` using `issue_write` with `method: "update"`.
 10. Return to the main conversation with: issue number, branch name, the plan, and acceptance criteria.
 
-## Phase C: Implementation Kickoff
+## Phase C: Implementation Handoff
 
 When asked to begin implementation (after Gate 1 approval):
 
-1. **Create a feature branch** `issue/{issue-number}` using `create_branch`.
-2. **Detect project type and configure workflow.conf:**
-   - Check if `workflow.conf` in the repo root has `TEST_CMD=""` (empty string)
-   - If empty, scan for project markers using the same priority order as `.githooks/lib/detect.sh`:
-     - `package.json` → `npm test`
-     - `pyproject.toml` or `setup.py` → `pytest`
-     - `Cargo.toml` → `cargo test`
-     - `go.mod` → `go test ./...`
-     - `pom.xml` → `mvn test`
-     - `build.gradle` / `build.gradle.kts` → `gradle test`
-   - **If exactly one marker found:** Run the following shell command to update workflow.conf:
-     ```bash
-     sed -i '' 's/^TEST_CMD=.*/TEST_CMD="<detected_value>"/' workflow.conf
-     git add workflow.conf
-     git commit -m "chore(config): auto-detect test runner as <detected_value>"
-     ```
-     Then report to the user: "Detected [project type] project, configured TEST_CMD as [detected_value] in workflow.conf"
-   - **If multiple markers found:** Warn the user: "⚠️ Multiple project markers found ([list]). Please set TEST_CMD manually in workflow.conf before proceeding." Do not write workflow.conf.
-   - **If no markers found:** Note: "No project markers found. workflow.conf will be configured later when the project is scaffolded." Continue without error.
-   - **If TEST_CMD is already set (non-empty):** Skip detection entirely — do not override manual configuration.
-3. **Update label** to `status/in-progress` using `issue_write` with `method: "update"`.
-4. Return the branch name and confirm implementation is ready to begin.
+1. **Set issue to `status/ready`** and rely on native automation to create `issue/{issue-number}` branch.
+2. **Do not directly set `status/in-progress`** when native assignment automation is available.
+3. Ask the user to assign Copilot in GitHub UI. Assignment triggers native move to `status/in-progress`.
+4. **Fallback only if native automation is unavailable:**
+    - Create branch `issue/{issue-number}` using `create_branch`.
+    - Update label to `status/in-progress`.
+5. Return the branch name and confirm implementation handoff is ready.
 
 ## Spawning Research Agents
 
