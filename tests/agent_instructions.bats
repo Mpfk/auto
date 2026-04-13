@@ -15,9 +15,13 @@ DEVELOP="$REPO_ROOT/.github/agents/develop.agent.md"
   [[ "$output" != *"Create a feature branch"* ]]
 }
 
-# Test 2: orchestrate.agent.md DOES contain Phase C: Implementation Kickoff
-@test "orchestrate.agent.md: Phase C: Implementation Kickoff section exists" {
-  grep -q "Phase C: Implementation Kickoff" "$ORCHESTRATE"
+# Test 2: orchestrate.agent.md DOES contain Phase C implementation section
+@test "orchestrate.agent.md: Phase C implementation section exists" {
+  grep -q "Phase C: Implementation Handoff" "$ORCHESTRATE"
+}
+
+@test "orchestrate.agent.md: asks whether to assign Copilot develop agent" {
+  grep -q "Would you like me to assign the Copilot 'develop' Agent to begin work" "$ORCHESTRATE"
 }
 
 # Test 3: copilot-instructions.md does NOT have "Create a feature branch" as step 3
@@ -63,6 +67,9 @@ DEVELOP="$REPO_ROOT/.github/agents/develop.agent.md"
 
 ISSUE_AGENT="$REPO_ROOT/.github/agents/issue.agent.md"
 STATE_GUARD="$REPO_ROOT/.github/workflows/issue-state-guard.yml"
+ISSUE_NATIVE="$REPO_ROOT/.github/workflows/issue-native-automation.yml"
+PR_SYNC="$REPO_ROOT/.github/workflows/pr-issue-sync.yml"
+CI_GATE="$REPO_ROOT/.github/workflows/ci-issue-gate.yml"
 
 # Test: issue.agent.md uses correct MCP tool names (no old names)
 @test "issue.agent.md: no references to deprecated create_issue tool name" {
@@ -102,6 +109,10 @@ STATE_GUARD="$REPO_ROOT/.github/workflows/issue-state-guard.yml"
   grep -q "Fallback" "$ISSUE_AGENT"
 }
 
+@test "issue.agent.md: ready handoff references Copilot develop agent" {
+  grep -q "Assign to Copilot 'develop' Agent to begin work" "$ISSUE_AGENT"
+}
+
 # Test: orchestrate.agent.md uses correct MCP tool names (no old names)
 @test "orchestrate.agent.md: no references to deprecated create_issue tool name" {
   run grep -w "create_issue" "$ORCHESTRATE"
@@ -122,19 +133,70 @@ STATE_GUARD="$REPO_ROOT/.github/workflows/issue-state-guard.yml"
   grep -q "issue_write" "$ORCHESTRATE"
 }
 
-# Test: issue-state-guard.yml has body-completeness auto-advance
-@test "issue-state-guard.yml: auto-advances on completed body" {
-  grep -q "Auto-advanced to status/ready" "$STATE_GUARD"
+@test "orchestrate.agent.md: includes explicit Gate 1 decision wording" {
+  grep -q "Gate 1: Approve this plan to move the issue to status/ready" "$ORCHESTRATE"
 }
 
-@test "issue-state-guard.yml: checks for Key Findings content" {
-  grep -q "Key Findings" "$STATE_GUARD"
+# Test: issue-state-guard.yml no longer auto-advances draft -> ready (3A)
+@test "issue-state-guard.yml: does not auto-advance to status/ready" {
+  run grep -q "Auto-advanced to status/ready" "$STATE_GUARD"
+  [ "$status" -ne 0 ]
 }
 
-@test "issue-state-guard.yml: checks for Plan content" {
-  grep -q "## Plan" "$STATE_GUARD"
+# Test: assignment path no longer auto-promotes to status/ready
+@test "issue-native-automation.yml: copilot assignment does not auto-promote status/ready" {
+  run grep -q "Plan is present but label wasn't updated — auto-promote" "$ISSUE_NATIVE"
+  [ "$status" -ne 0 ]
 }
 
-@test "issue-state-guard.yml: checks for Acceptance Criteria content" {
-  grep -q "Acceptance Criteria" "$STATE_GUARD"
+# Test: /auto plan-approved is restricted to maintainers
+@test "issue-native-automation.yml: plan approval checks maintainer association" {
+  grep -q "author_association" "$ISSUE_NATIVE"
+  grep -q "OWNER" "$ISSUE_NATIVE"
+  grep -q "MEMBER" "$ISSUE_NATIVE"
+}
+
+# Test: /auto plan-approved validates source status
+@test "issue-native-automation.yml: plan approval requires planning or researching status" {
+  grep -q "status/planning" "$ISSUE_NATIVE"
+  grep -q "status/researching" "$ISSUE_NATIVE"
+}
+
+# Test: PR sync no longer promotes status/review from ready_for_review or review_requested
+@test "pr-issue-sync.yml: does not reference ready_for_review transitions" {
+  run grep -q "ready_for_review" "$PR_SYNC"
+  [ "$status" -ne 0 ]
+}
+
+@test "pr-issue-sync.yml: does not reference review_requested transitions" {
+  run grep -q "review_requested" "$PR_SYNC"
+  [ "$status" -ne 0 ]
+}
+
+# Test: CI-driven workflow exists and targets status/review on green checks
+@test "ci-issue-gate.yml: exists and sets status/review" {
+  grep -q "name: CI Issue Gate" "$CI_GATE"
+  grep -q "status/review" "$CI_GATE"
+}
+
+@test "issue-native-automation.yml: ready comment mentions Copilot develop agent" {
+  grep -q "Assign to Copilot 'develop' Agent to begin work" "$ISSUE_NATIVE"
+}
+
+@test "issue-native-automation.yml: plan approved comment includes next step" {
+  grep -q "Gate 1 approved" "$ISSUE_NATIVE"
+}
+
+@test "ci-issue-gate.yml: review kickoff comment includes next-step instructions" {
+  grep -q "Review kickoff" "$CI_GATE"
+  grep -q "Invoke Copilot 'review' Agent" "$CI_GATE"
+}
+
+@test "ci-issue-gate.yml: excludes own workflow run from check evaluation" {
+  grep -q "ownRunToken" "$CI_GATE"
+  grep -q "details.includes(ownRunToken)" "$CI_GATE"
+}
+
+@test "pr-issue-sync.yml: merge completion comment includes gate closeout" {
+  grep -q "Gate 2 complete" "$PR_SYNC"
 }

@@ -45,7 +45,7 @@ flowchart TD
     G1 -- You revise --> D
     E --> CI{CI checks\npass?}
     CI -- Fail --> E
-    CI -- Pass --> SR[Main conversation:\nset label to status/review]
+    CI -- Pass --> SR[Native automation:\nset label to status/review]
     SR --> F[Review Agent: validate]
     F -- Fails --> E
     F -- Passes --> CONV[Main conversation:\nconvert PR draft → ready-for-review]
@@ -135,7 +135,7 @@ You interact with the workflow at two gates. Agents cannot proceed past either o
 
 **When:** After implementation is complete, tests pass, and the Review Agent has signed off.
 
-**Prerequisite:** The issue **MUST have the `status/review` label** before Gate 2 is presented. This transition happens when all Develop agents have completed, all tests pass, and the Review Agent has been invoked. The main conversation updates the issue label to `status/review` before presenting this gate — this is a hard rule, not optional.
+**Prerequisite:** The issue **MUST have the `status/review` label** before Gate 2 is presented. This transition happens when all Develop agents have completed and CI checks are green on the draft PR. Native automation updates the issue label to `status/review` before Gate 2 is presented — this is a hard rule, not optional.
 
 **You see:**
 - Review Agent summary (what passed, any concerns)
@@ -241,7 +241,7 @@ stateDiagram-v2
 | `blocked` | Previous state | Blocking condition resolved | No |
 | Any active | `cancelled` | You decide to stop | **Yes** |
 
-**Critical rule:** The issue label MUST be updated to `status/review` BEFORE presenting Gate 2 to the user. This transition is performed by the main conversation when all Develop agents have completed and tests pass. The label `status/review` signals "awaiting human review." Skipping this transition is a workflow violation.
+**Critical rule:** The issue label MUST be updated to `status/review` BEFORE presenting Gate 2 to the user. This transition is performed by CI-driven native automation when checks are green on the draft PR. The label `status/review` signals "awaiting human review." Skipping this transition is a workflow violation.
 
 **Gate 2 prerequisites (all three required):** (1) issue has `status/review` label, (2) Review Agent returned PASS, (3) CI checks are green. Only after all three are satisfied does the main conversation convert the PR from **draft to ready-for-review** and present Gate 2. Marking a PR as ready-for-review before these prerequisites are met is a workflow violation.
 

@@ -2,7 +2,7 @@ name: PR Issue Sync
 
 on:
   pull_request:
-    types: [opened, reopened, synchronize, ready_for_review, review_requested, closed]
+    types: [opened, reopened, synchronize, closed]
 
 permissions:
   issues: write
@@ -56,24 +56,14 @@ jobs:
               return;
             }
 
-            if (action === 'ready_for_review') {
-              await setStatus('status/review');
+            if (action === 'closed' && pr.merged) {
+              await setStatus('status/done');
               await github.rest.issues.createComment({
                 owner,
                 repo,
                 issue_number,
-                body: 'PR is ready for review. Invoke the review agent and complete Gate 2 before merge.',
+                body: 'Gate 2 complete: PR merged. Status moved to status/done. Next step: no action required unless follow-up work is needed.',
               });
-              return;
-            }
-
-            if (action === 'review_requested') {
-              await setStatus('status/review');
-              return;
-            }
-
-            if (action === 'closed' && pr.merged) {
-              await setStatus('status/done');
               await github.rest.issues.update({ owner, repo, issue_number, state: 'closed' });
               await github.rest.git.deleteRef({ owner, repo, ref: `heads/${branch}` }).catch(() => {});
             }
