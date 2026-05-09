@@ -97,9 +97,8 @@ jobs:
               body: [
                 'Implementation kickoff:',
                 '',
-                `> **IMPORTANT — branch:** The branch \`issue/${issue.number}\` has already been created.`,
-                '> Checkout **this existing branch** before making any commits.',
-                '> Do NOT create a new branch (e.g. `copilot/...`). Use `issue/' + issue.number + '` only.',
+                `> **IMPORTANT — branch:** Preferred path is branch \`issue/${issue.number}\` (already created).`,
+                '> If your branch is not `issue/{number}` (for example `copilot/...`), include a valid issue-closing reference in the PR title/body (for example: `Closes #' + issue.number + '`, `Fixes #' + issue.number + '`, or `Resolves #' + issue.number + '`).',
                 '> Copilot `develop` agent is now the implementation worker for this issue.',
                 '',
                 '- Run TDD agent per independently testable task',

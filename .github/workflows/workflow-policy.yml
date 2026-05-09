@@ -26,17 +26,19 @@ jobs:
             const branch = pr.head.ref;
             const prBody = `${pr.title}\n\n${pr.body || ''}`;
 
-            // Extract issue number: prefer branch name (issue/{n}), fall back to 'Closes #N' in PR body.
+            // Extract issue number: prefer branch name (issue/{n}), fall back to a closing keyword reference in PR text.
             // This supports both the VS Code path (issue/{n} branches) and the Native GitHub path
             // where GitHub's Copilot SWE agent always creates copilot/... branches.
             let issueNumber;
             const branchMatch = /^issue\/(\d+)$/.exec(branch);
+            // Keep this pattern aligned with .github/workflows/pr-issue-sync.yml.
+            const closingReferenceRegex = /\b(?:close[sd]?|fix(?:e[sd])?|resolve[sd]?)\s*:?\s+(?:[A-Za-z0-9_.-]+\/[A-Za-z0-9_.-]+)?#(\d+)\b/i;
             if (branchMatch) {
               issueNumber = Number(branchMatch[1]);
             } else {
-              const bodyMatch = /closes\s+#(\d+)/i.exec(prBody);
+              const bodyMatch = closingReferenceRegex.exec(prBody);
               if (!bodyMatch) {
-                core.setFailed(`PR must either use an issue/{number} branch or include 'Closes #N' in the title/body. Branch: ${branch}`);
+                core.setFailed(`PR must either use an issue/{number} branch or include a valid issue-closing reference (for example: 'Closes #123', 'Fixes #123', or 'Resolves #123') in the title/body. Branch: ${branch}`);
                 return;
               }
               issueNumber = Number(bodyMatch[1]);
@@ -61,11 +63,6 @@ jobs:
 
             if (!pr.draft && !inReview) {
               core.setFailed(`PR cannot be ready-for-review unless linked issue #${issueNumber} is status/review.`);
-              return;
-            }
-
-            if (!prBody.includes(`Closes #${issueNumber}`)) {
-              core.setFailed(`PR must include 'Closes #${issueNumber}' in title or body.`);
               return;
             }
 
