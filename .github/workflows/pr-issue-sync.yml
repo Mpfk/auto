@@ -27,15 +27,17 @@ jobs:
 
             const branch = pr.head.ref;
 
-            // Prefer issue/{N} branch name; fall back to "Closes #N" in title/body.
+            // Prefer issue/{N} branch name; fall back to a closing keyword reference in title/body.
             // This handles the Copilot SWE agent which always creates copilot/... branches.
             let issue_number;
             const branchMatch = /^issue\/(\d+)$/.exec(branch);
+            // Keep this pattern aligned with .github/workflows/workflow-policy.yml.
+            const closingReferenceRegex = /\b(?:close[sd]?|fix(?:e[sd])?|resolve[sd]?)\s*:?\s+(?:[A-Za-z0-9_.-]+\/[A-Za-z0-9_.-]+)?#(\d+)\b/i;
             if (branchMatch) {
               issue_number = Number(branchMatch[1]);
             } else {
               const prText = `${pr.title}\n\n${pr.body || ''}`;
-              const bodyMatch = /closes\s+#(\d+)/i.exec(prText);
+              const bodyMatch = closingReferenceRegex.exec(prText);
               if (!bodyMatch) return;
               issue_number = Number(bodyMatch[1]);
             }

@@ -62,7 +62,7 @@ flowchart TD
 | 2. Research | Research Agents (parallel) | Investigate codebase, docs, external sources, constraints |
 | 3. Synthesize + Plan | Orchestrate | Merges research, writes plan, presents Gate 1 |
 | 4. Gate 1 | Main conversation | You approve or revise the plan |
-| 5. Implement | Develop + Documentation Agents (parallel) | Feature branch, Red-Green-Refactor, docs updated |
+| 5. Implement | Develop + Documentation Agents (parallel) | Creates feature branch, Red-Green-Refactor, docs updated |
 | 6. Review | Review Agent | Validates TDD compliance, quality, tests |
 | 7. Gate 2 | Main conversation | You approve merge or reject with feedback |
 | 8. Merge | Main conversation | Merges branch, closes issue |
