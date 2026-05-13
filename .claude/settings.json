@@ -1,0 +1,65 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(gh *)",
+      "Bash(git status*)",
+      "Bash(git log*)",
+      "Bash(git diff*)",
+      "Bash(git branch*)",
+      "Bash(git checkout*)",
+      "Bash(git add*)",
+      "Bash(git commit*)",
+      "Bash(git push*)",
+      "Bash(git fetch*)",
+      "Bash(git rev-parse*)",
+      "Bash(git config core.hooksPath*)",
+      "Bash(cat *)",
+      "Bash(source .githooks/lib/detect.sh*)",
+      "Bash(find *)",
+      "Bash(ls *)",
+      "Bash(grep *)",
+      "Bash(xargs *)",
+      "Bash(awk *)",
+      "Bash(sed *)",
+      "Bash(wc *)",
+      "Bash(npm test*)",
+      "Bash(npm run test*)",
+      "Bash(pytest*)",
+      "Bash(go test*)",
+      "Bash(cargo test*)",
+      "Bash(mvn test*)",
+      "Bash(./gradlew test*)",
+      "mcp__github__list_issues",
+      "mcp__github__get_issue",
+      "mcp__github__create_issue",
+      "mcp__github__update_issue",
+      "mcp__github__add_issue_comment",
+      "mcp__github__get_pull_request",
+      "mcp__github__list_pull_requests",
+      "mcp__github__create_pull_request",
+      "mcp__github__get_pull_request_status",
+      "mcp__github__get_pull_request_files",
+      "mcp__github__get_pull_request_reviews",
+      "mcp__github__get_pull_request_comments",
+      "mcp__github__merge_pull_request",
+      "mcp__github__create_branch",
+      "mcp__github__search_issues",
+      "mcp__github__search_code",
+      "mcp__github__list_commits"
+    ]
+  },
+  "hooks": {
+    "PostToolUse": [
+      {
+        "matcher": "Write|Edit",
+        "hooks": [
+          {
+            "type": "command",
+            "command": ".github/hooks/scripts/doc-freshness.sh",
+            "timeout": 5
+          }
+        ]
+      }
+    ]
+  }
+}
