@@ -80,7 +80,7 @@ For `README.md` updates: add only setup steps, configuration options, and links 
 
 After writing, check:
 ```
-git diff --cached --name-only --diff-filter=A | grep '\.md$' | grep -v '^docs/' | grep -v '^README\.md$'
+git diff --cached --name-only --diff-filter=A | grep '\.md$' | grep -v '^docs/' | grep -v '^README\.md$' | grep -v '^CLAUDE\.md$' | grep -v '^\.claude/'
 ```
 If any results appear, those files are in the wrong location. Move them to the appropriate `docs/` subdirectory before committing.
 

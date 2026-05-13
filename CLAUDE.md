@@ -11,7 +11,7 @@ This repository uses the **Auto** multi-agent workflow. All work flows through G
 3. **No direct commits to `main`.** All work on `issue/{number}` branches. The branch guard hook enforces this.
 4. **Strict TDD.** Red-Green-Refactor. Tests written before implementation. No exceptions.
 5. **Conventional Commits.** `type(scope): description`. Types: `feat`, `fix`, `test`, `refactor`, `docs`, `chore`. The commit-msg hook enforces this.
-6. **Docs in `docs/` only.** The only permitted root-level doc is `README.md`. No `.md` files in `src/`, project root, or elsewhere.
+6. **Docs in `docs/` only.** Permitted root-level files: `README.md` and `CLAUDE.md`. No other `.md` files in `src/`, project root, or elsewhere. `.claude/` command files are also allowed.
 7. **Gate compliance.** Gate 1 (plan approval) and Gate 2 (merge approval) require human confirmation. Never auto-approve or skip them.
 
 ## Workflow Status Flow

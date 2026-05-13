@@ -17,7 +17,7 @@ case "$FILE" in
     ;;
   *.md)
     case "$FILE" in
-      docs/*|README.md|.github/*) ;;
+      docs/*|README.md|CLAUDE.md|.github/*|.claude/*) ;;
       *) echo "{\"systemMessage\": \"WARNING: Documentation files must be placed in docs/, not $FILE\"}" ;;
     esac
     ;;

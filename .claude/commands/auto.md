@@ -282,7 +282,7 @@ CI is green. Run the Review Agent.
 
 3. **Extract acceptance criteria** from issue body:
    ```
-   gh issue view {number} --json body --jq '.body' | awk '/## Acceptance Criteria/,/^## [^A]/'
+   gh issue view {number} --json body --jq '.body' | awk '/## Acceptance Criteria/{f=1;next} /^## /{f=0} f{print}'
    ```
 
 4. **Invoke review sub-agent** using the instructions from `.claude/commands/review.md` with:

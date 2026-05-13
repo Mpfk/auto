@@ -65,7 +65,7 @@ For each source and test file changed, read the file. Assess:
 ```
 git diff main..HEAD --name-only --diff-filter=A | grep '\.md$'
 ```
-Any new `.md` file that is NOT under `docs/` and NOT `README.md` at the repo root is a FAIL. State exactly where the file should be moved.
+Any new `.md` file that is NOT under `docs/`, NOT `README.md` at the repo root, NOT `CLAUDE.md` at the repo root, and NOT under `.claude/` is a FAIL. State exactly where the file should be moved.
 
 **Step 5: Verify documentation completeness.**
 
