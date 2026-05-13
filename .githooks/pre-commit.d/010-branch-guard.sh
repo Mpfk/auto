@@ -6,6 +6,6 @@ source "$REPO_ROOT/workflow.conf"
 branch=$(git rev-parse --abbrev-ref HEAD)
 if [ "$branch" = "$MAIN_BRANCH" ]; then
   echo "ERROR: Direct commits to $MAIN_BRANCH are forbidden."
-  echo "Create an issue and work on a feature branch: issue/{issue-id}"
+  echo "Create a feature branch and link it to a GitHub Issue."
   exit 1
 fi
