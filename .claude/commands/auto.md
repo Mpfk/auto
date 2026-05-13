@@ -169,7 +169,7 @@ Gate 1 was approved. Begin implementation.
    ```
    If missing (native automation hasn't fired yet), create it from main:
    ```
-   MAIN_SHA=$(git rev-parse origin/main)
+   MAIN_SHA=$(gh api repos/$REPO/git/ref/heads/main --jq '.object.sha')
    gh api repos/$REPO/git/refs --method POST \
      --field ref="refs/heads/issue/{number}" \
      --field sha="$MAIN_SHA"

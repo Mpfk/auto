@@ -26,14 +26,20 @@ If any completed check has a failing conclusion (not `success`, `neutral`, or `s
 
 ## Review Process
 
-**Step 1: Read context.**
+**Step 1: Ensure correct branch is checked out.**
+```
+git fetch origin
+git checkout {branch}
+```
+
+**Step 2: Read context.**
 ```
 gh issue view {issue_number} --json title,body,labels --jq '{title: .title, labels: [.labels[].name], body: .body}'
 ```
 
 Confirm the issue has `status/review` label. If it still shows `status/in-progress`, CI automation may not have fired yet — re-check CI status and wait.
 
-**Step 2: Review git log.**
+**Step 3: Review git log.**
 ```
 git log main..HEAD --oneline
 ```
@@ -48,7 +54,7 @@ b) **TDD sequence:** For each feature scope, `[RED]` commits (type `test`) must 
 
    If GREEN commits exist with no preceding RED commit for the same scope, that is a TDD violation → FAIL.
 
-**Step 3: Review changed files.**
+**Step 4: Review changed files.**
 ```
 git diff main..HEAD --name-only
 ```
@@ -61,13 +67,13 @@ For each source and test file changed, read the file. Assess:
 
 - **Scope creep:** No implementation was added beyond what the tests require.
 
-**Step 4: Verify doc placement.**
+**Step 5: Verify doc placement.**
 ```
 git diff main..HEAD --name-only --diff-filter=A | grep '\.md$'
 ```
 Any new `.md` file that is NOT under `docs/`, NOT `README.md` at the repo root, NOT `CLAUDE.md` at the repo root, and NOT under `.claude/` is a FAIL. State exactly where the file should be moved.
 
-**Step 5: Verify documentation completeness.**
+**Step 6: Verify documentation completeness.**
 
 For any user-facing or architectural change:
 - New or changed public interface → `docs/api/` should be updated
@@ -79,7 +85,7 @@ ls docs/
 ```
 Verify the relevant section was updated. Missing docs for user-facing or architectural changes is a FAIL.
 
-**Step 6: Run the full test suite.**
+**Step 7: Run the full test suite.**
 ```
 cat workflow.conf
 ```
@@ -93,7 +99,7 @@ Run:
 ```
 All tests must pass. A single failing test is an unconditional FAIL.
 
-**Step 7: Validate acceptance criteria.**
+**Step 8: Validate acceptance criteria.**
 
 For each criterion in $ARGUMENTS, verify there is a test in the test suite that validates it. If a criterion has no corresponding test, that is a FAIL.
 
