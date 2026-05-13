@@ -26,6 +26,12 @@ jobs:
             const branch = pr.head.ref;
             const prBody = `${pr.title}\n\n${pr.body || ''}`;
 
+            // Reject PRs opened directly from the base branch.
+            if (branch === pr.base?.ref || branch === 'main') {
+              core.setFailed(`PR must not be opened directly from the main branch. Create a feature branch and link it to an issue (e.g. 'Closes #N' in the PR body).`);
+              return;
+            }
+
             // Extract issue number: prefer branch name (issue/{n}), fall back to a closing keyword reference in PR text.
             // This supports both the VS Code path (issue/{n} branches) and the Native GitHub path
             // where GitHub's Copilot SWE agent always creates copilot/... branches.
