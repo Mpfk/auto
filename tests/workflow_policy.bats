@@ -121,3 +121,17 @@ NODE
   [ "$status" -eq 0 ]
   [[ "$output" == *'"failed":"PR cannot be ready-for-review unless linked issue #67 is status/review."'* ]]
 }
+
+@test "workflow-policy: PR from main branch fails even with closing reference" {
+  run_policy '{"head":{"ref":"main"},"title":"fix: something","body":"Closes #67","draft":true}' '{"number":67,"labels":[]}'
+
+  [ "$status" -eq 0 ]
+  [[ "$output" == *'"failed":"PR must not be opened directly from the main branch'* ]]
+}
+
+@test "workflow-policy: any named feature branch with closing reference passes" {
+  run_policy '{"head":{"ref":"my-feature-branch"},"title":"fix: something","body":"Closes #67","draft":true}' '{"number":67,"labels":[]}'
+
+  [ "$status" -eq 0 ]
+  [[ "$output" == *'"failed":null'* ]]
+}
