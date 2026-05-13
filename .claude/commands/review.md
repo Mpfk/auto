@@ -35,7 +35,7 @@ Confirm the issue has `status/review` label. If it still shows `status/in-progre
 
 **Step 2: Review git log.**
 ```
-git log main..HEAD --format="%H %s" --oneline
+git log main..HEAD --oneline
 ```
 Check each commit:
 
@@ -113,7 +113,7 @@ For each criterion in $ARGUMENTS, verify there is a test in the test suite that 
 - [x] TDD sequence — RED before GREEN for all {M} cycles
 - [x] Code quality — no dead code, no security issues
 - [x] Test quality — meaningful assertions, edge cases covered
-- [x] Doc placement — no .md files outside docs/ (or README.md)
+- [x] Doc placement — no .md files outside docs/, README.md, CLAUDE.md, or .claude/
 - [x] Documentation — docs/ updated for user-facing changes
 - [x] Full test suite — all {K} tests pass
 - [x] Acceptance criteria — all {J} criteria have corresponding tests

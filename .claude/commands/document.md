@@ -86,7 +86,7 @@ If any results appear, those files are in the wrong location. Move them to the a
 
 **7. Stage and commit all doc changes.**
 ```
-git add docs/ README.md
+git add docs/ README.md CLAUDE.md
 git commit -m "docs: update {brief description of what was documented} for #{issue_number}"
 ```
 

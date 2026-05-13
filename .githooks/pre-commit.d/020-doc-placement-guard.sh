@@ -1,6 +1,6 @@
 #!/bin/bash
 # Prevents documentation files from being created in wrong locations.
-# Allowed: docs/, README.md (root), .github/
+# Allowed: docs/, README.md (root), CLAUDE.md (root), .github/, .claude/
 bad_docs=$(git diff --cached --name-only --diff-filter=A \
   | grep '\.md$' \
   | grep -v '^docs/' \
