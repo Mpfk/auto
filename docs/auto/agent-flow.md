@@ -1,12 +1,14 @@
 # Agent Flow — Workflow Specification
 
-Auto is a structured software development workflow powered by specialized GitHub Copilot agents. Every piece of work is tracked as a GitHub Issue, developed on its own branch, implemented test-first, and documented before it reaches `main`.
+Auto is a structured software development workflow powered by specialized AI agents. Every piece of work is tracked as a GitHub Issue, developed on its own branch, implemented test-first, and documented before it reaches `main`.
 
-The **main conversation** (you + Copilot) coordinates the workflow. Agents are short-lived workers for specific phases — no single agent runs the entire lifecycle. You stay in control at two gates.
+The **main conversation** (you + your AI assistant) coordinates the workflow. Agents are short-lived workers for specific phases — no single agent runs the entire lifecycle. You stay in control at two gates.
 
 ## Execution Modes
 
-**Chat-orchestrated** — the main conversation drives each phase via `@orchestrate` in VS Code.
+**Claude Code** — slash commands in Claude Code drive each phase. `/issue` creates the issue and plan; `/auto` drives the full workflow from the current state, pausing only at Gate 1 and Gate 2.
+
+**Copilot chat-orchestrated** — the main conversation drives each phase via `@orchestrate` in VS Code.
 
 **GitHub-native** — issue labels, assignees, and PR events drive phase transitions directly on GitHub.
 
@@ -189,6 +191,23 @@ Issues use a structured body template (enforced via `.github/ISSUE_TEMPLATE/work
 Branches follow the naming convention `issue/{issue-number}` (e.g. `issue/42`).
 
 ## Agents
+
+### Claude Code Slash Commands
+
+| Command | Purpose | Equivalent Copilot agent |
+|---------|---------|--------------------------|
+| `/issue` | Create issue, parallel research, plan, Gate 1 | `@orchestrate` / `@issue` |
+| `/auto` | Auto-drive full workflow from current state; pauses at Gate 1 and Gate 2 | *(new — no Copilot equivalent)* |
+| `/develop` | One Red-Green-Refactor cycle with retrospective | `@develop` |
+| `/document` | Maintain `docs/` | `@documentation` |
+| `/review` | Pre-merge validation | `@review` |
+| `/research` | Single-strategy investigation | `@research` |
+
+**Config:** `.claude/commands/` | Requires Claude Code
+
+The `/auto` command is unique to Claude Code: it reads the current `status/*` label on a given issue and drives all appropriate phases automatically — spawning research, develop, document, and review sub-agents as needed — looping back on Gate 2 rejection. `gh` CLI is available in Claude Code (unlike Copilot cloud), so commands use it directly without MCP configuration.
+
+---
 
 ### Issue Agent
 

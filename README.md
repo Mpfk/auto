@@ -1,9 +1,17 @@
 # Auto — Multi-Agent Software Development Template
 
-A project template that structures development using specialized GitHub Copilot agents, test-driven development, and GitHub Issues.
+A project template that structures development using specialized AI agents, test-driven development, and GitHub Issues. Works with **GitHub Copilot** and **Claude Code**.
 
 ## Quick Start
 
+### Claude Code
+1. Clone this template into your new project
+2. Activate git hooks (run once): `git config core.hooksPath .githooks`
+3. Open Claude Code and start working:
+   - `/issue Add a contact form` — research, plan, Gate 1
+   - `/auto` — drive the full workflow from the current issue state
+
+### GitHub Copilot
 1. Clone this template into your new project
 2. Configure MCP write access — **required once per repo:** [`docs/auto/copilot-cloud-setup.md`](docs/auto/copilot-cloud-setup.md)
 3. Start working:
@@ -39,13 +47,26 @@ Every piece of work is tracked as a GitHub Issue, developed on its own `issue/{n
 
 ## Setup
 
-### Required: MCP Write Access
+### Claude Code
+
+**Prerequisites:**
+- [Claude Code](https://claude.ai/code) installed
+- Repository cloned locally
+
+**Steps:**
+1. Activate git hooks (run once after cloning): `git config core.hooksPath .githooks`
+2. Open Claude Code in the repo directory
+3. Use `/issue` to start new work or `/auto` to drive an existing issue forward
+
+No additional MCP configuration is needed — `gh` CLI and GitHub MCP tools work out of the box.
+
+### GitHub Copilot — Required: MCP Write Access
 
 Agents need write access to create issues, branches, and pull requests. This is a one-time setting per repository.
 
 → Follow [**`docs/auto/copilot-cloud-setup.md`**](docs/auto/copilot-cloud-setup.md)
 
-### GitHub-Native Mode
+### GitHub-Native Mode (Copilot)
 
 Drive the workflow entirely from GitHub — no local IDE required.
 
@@ -60,7 +81,7 @@ Drive the workflow entirely from GitHub — no local IDE required.
 4. When CI passes, the Review Agent validates automatically
 5. Approve the merge — branch merges to `main` and the issue closes
 
-### VS Code Mode
+### VS Code Mode (Copilot)
 
 **Prerequisites:**
 - [GitHub Copilot Chat](https://marketplace.visualstudio.com/items?itemName=GitHub.copilot-chat) extension installed
@@ -81,6 +102,19 @@ Drive the workflow entirely from GitHub — no local IDE required.
 
 ## Agents
 
+### Claude Code (slash commands)
+
+| Command | Purpose |
+|---------|---------|
+| `/issue` | Create issue, run parallel research, write plan, present Gate 1 |
+| `/auto` | **Auto-drive the full workflow** from the current issue state — pauses only at Gate 1 and Gate 2 |
+| `/develop` | Implement one component via Red-Green-Refactor |
+| `/document` | Maintain `docs/` |
+| `/review` | Pre-merge validation |
+| `/research` | Single-strategy investigation (`codebase`, `docs`, `external`, `constraints`) |
+
+### GitHub Copilot (chat agents)
+
 | Agent | Purpose |
 |-------|---------|
 | `@issue` | GitHub-native intake: research, planning, and Gate 1 prep |
@@ -93,9 +127,13 @@ Drive the workflow entirely from GitHub — no local IDE required.
 
 ```
 ├── workflow.conf               # Test command, source/test directories
+├── CLAUDE.md                   # Claude Code project instructions (auto-loaded)
+├── .claude/
+│   ├── settings.json           # Project-scoped permissions and hooks
+│   └── commands/               # Slash command definitions (/issue, /auto, /develop, etc.)
 ├── .github/
 │   ├── copilot-instructions.md # Workspace instructions (auto-loaded by Copilot)
-│   ├── agents/                 # Agent definitions (.agent.md files)
+│   ├── agents/                 # Copilot agent definitions (.agent.md files)
 │   ├── workflows/              # GitHub Actions CI
 │   └── ISSUE_TEMPLATE/         # Structured issue template
 ├── .githooks/                  # Git hook enforcement (local dev)
@@ -107,4 +145,4 @@ Drive the workflow entirely from GitHub — no local IDE required.
 ## Docs
 
 - [`docs/auto/agent-flow.md`](docs/auto/agent-flow.md) — Complete workflow specification, state machine, and agent reference
-- [`docs/auto/copilot-cloud-setup.md`](docs/auto/copilot-cloud-setup.md) — MCP write access setup and language tooling
+- [`docs/auto/copilot-cloud-setup.md`](docs/auto/copilot-cloud-setup.md) — Copilot MCP write access setup and language tooling
