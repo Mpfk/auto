@@ -95,6 +95,41 @@ When invoking any sub-agent, provide **fully materialized context** — not refe
 
 Run research sub-agents in parallel (independent strategies). Run develop + documentation agents in parallel during implementation.
 
+## Managing Autonomous Sub-agent Teams
+
+When the user grants broad autonomy ("manage a team", "automatically complete all open issues", "auto-merge", or equivalent), apply this management pattern. The user's grant is the source of authority — it does not override the Non-Negotiable Rules; it delegates gate approval within an agreed scope (see "When to ask vs proceed" below).
+
+### Per-issue workflow
+
+1. **Issue-first.** File a GitHub Issue before any code (Non-Negotiable Rule 1). Use `mcp__github__create_issue` so it works regardless of `gh` CLI auth state.
+2. **One `/auto` sub-agent per issue**, spawned with `isolation: "worktree"` so concurrent sub-agents don't collide and the user's main checkout stays clean.
+3. **Materialized context in every prompt** — verbatim plan and acceptance criteria, file paths with line numbers, dependencies on other issues, and explicit coordination notes when other sub-agents are in flight on overlapping files.
+4. **Gate authority is delegated, not skipped.** A `/auto` sub-agent runs to completion without pausing, so it cannot stop at a gate interactively. The spawn prompt must state explicitly which gates the sub-agent may self-approve, based on the scope the user authorized. Features still surface Gate 1 to the user *before* the sub-agent is spawned. Never grant a sub-agent gate authority the user has not delegated.
+
+### Concurrency strategy
+
+- **File-disjoint issues:** spawn in parallel. Each sub-agent rebases on `main` before its final push.
+- **File-overlapping issues:** serialize. File the dependent issue now, but spawn its sub-agent only after the parent issue merges.
+- **Same file, different regions:** parallel is acceptable. Tell each sub-agent that if its pre-push rebase reports a conflict, it should resolve by keeping BOTH branches' additions.
+
+### After each merge
+
+1. **Pull `main` locally and verify it landed.** Append a sentinel (e.g. `&& echo _PULL_DONE_`) to the pull command and confirm the sentinel appears in the output — interrupted pulls silently leave a stale local tree.
+2. **Reinstall dependencies** if the dependency manifest changed.
+3. **Restart any long-running dev process** so it serves the merged code.
+4. **Smoke-test the merged work** — run the relevant subset of `TEST_CMD` (from `workflow.conf`) or exercise the affected entry point to confirm it actually works.
+
+### Friction handling
+
+- When a sub-agent hits friction (tooling bug, infrastructure outage, workflow gap), file a GitHub Issue for it. Never accumulate undocumented workarounds.
+- Before re-discovering a known problem, search existing open issues for prior friction reports.
+
+### When to ask vs proceed
+
+- **Features (`feat`):** file the issue, present Gate 1 with the plan and acceptance criteria, and wait for explicit user approval before spawning the `/auto` sub-agent.
+- **Fixes and chores (`fix`, `chore`, `docs`, `refactor`) under a standing autonomy grant:** spawn the `/auto` sub-agent without further prompting, including Gate 2 auto-merge within the granted scope.
+- **Ambiguous scope:** ask via `AskUserQuestion` before filing — don't file an issue you can't precisely scope.
+
 ## GitHub Tools
 
 `mcp__github__*` tools are globally available. Use `gh` CLI for issue/PR management in straightforward cases — it works fully in Claude Code. Use MCP tools for complex operations (batch updates, searching, etc.).
