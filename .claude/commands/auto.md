@@ -386,6 +386,7 @@ Report: "Issue #{number} merged to `main`. The `pr-issue-sync.yml` automation wi
 
 - **Never skip gates.** Gate 1 and Gate 2 are absolute hard stops requiring explicit "approve" from the user.
 - **Never auto-approve.** If the user has not responded to a gate prompt, do not proceed.
+- **Delegated gate authority.** When `/auto` is itself invoked as an autonomous sub-agent whose spawn prompt *explicitly* delegates gate approval — see "Managing Autonomous Sub-agent Teams" in `CLAUDE.md` — it may self-approve only the gates named in that grant. Absent such an explicit delegation, the two contracts above hold and gates remain hard stops.
 - **Idempotent.** Running `/auto {N}` multiple times is safe — it reads state and continues from exactly where it left off.
 - **CI pending → stop.** If CI is still running, report that and wait. Tell the user to re-invoke when CI completes, or use `/loop 2m /auto {N}` for auto-polling.
 - **Fully materialized context.** Every sub-agent invocation includes verbatim problem statements and criteria, not references to "read the issue."

@@ -74,6 +74,8 @@ flowchart TD
 - Develop Agent(s) + Documentation Agent run in parallel during implementation.
 - Review is always sequential — implementation must be complete first.
 
+**Multi-issue orchestration:** When the user grants broad autonomy across several issues at once, one `/auto` sub-agent is spawned per issue (each in its own worktree). Concurrency, post-merge verification, friction handling, and delegated gate authority are governed by the "Managing Autonomous Sub-agent Teams" section in `CLAUDE.md`.
+
 ## Approval Gates
 
 ### Gate 1 — Plan Approval
