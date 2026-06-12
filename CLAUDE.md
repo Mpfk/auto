@@ -2,12 +2,12 @@
 
 This repository uses the **Auto** multi-agent workflow. All work flows through GitHub Issues with two human approval gates. See `docs/auto/agent-flow.md` for the full specification.
 
-`gh` CLI is fully available in Claude Code (unlike Copilot cloud where it returns 403) — commands use `gh` as the primary tool.
+GitHub access depends on the environment: in **local** Claude Code sessions the `gh` CLI is available and is the primary tool; in **cloud/remote** sessions (claude.ai/code, mobile, GitHub Actions) `gh` is not installed and all GitHub operations go through the `mcp__github__*` MCP tools instead. Every Auto command starts with a Step 0 detection check and maps `gh` invocations to MCP equivalents per `docs/auto/github-access.md`. Both modes are first-class — never treat a missing `gh` CLI as a blocker.
 
 ## Non-Negotiable Rules
 
 1. **Issue-first.** No code, no branches, no PRs without a GitHub Issue. Check for duplicates first.
-2. **Branch naming.** Always `issue/{number}`. Never `copilot/...` or any other convention.
+2. **Branch naming.** Always `issue/{number}`. Never `copilot/...` or any other convention. *Exception:* when a managed cloud session assigns and enforces its own push branch (e.g. `claude/...`), develop on that branch and link the issue via `Closes #N` in the PR body (see `docs/auto/github-access.md`).
 3. **No direct commits to `main`.** All work on `issue/{number}` branches. The branch guard hook enforces this.
 4. **Strict TDD.** Red-Green-Refactor. Tests written before implementation. No exceptions.
 5. **Conventional Commits.** `type(scope): description`. Types: `feat`, `fix`, `test`, `refactor`, `docs`, `chore`. The commit-msg hook enforces this.
@@ -132,4 +132,4 @@ When the user grants broad autonomy ("manage a team", "automatically complete al
 
 ## GitHub Tools
 
-`mcp__github__*` tools are globally available. Use `gh` CLI for issue/PR management in straightforward cases — it works fully in Claude Code. Use MCP tools for complex operations (batch updates, searching, etc.).
+`mcp__github__*` tools are globally available in every environment. Use `gh` CLI for issue/PR management in straightforward cases when it is installed and authenticated (local sessions). In cloud/remote sessions — or whenever `command -v gh` fails — use the MCP tools exclusively; `docs/auto/github-access.md` maps every `gh` operation used by the Auto commands to its MCP equivalent. MCP tools are also preferred for complex operations (batch updates, searching, etc.) in any environment.

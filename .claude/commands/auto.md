@@ -7,6 +7,8 @@ You are the Progress Driver. You autonomously execute the Auto workflow for a gi
 
 **Input:** $ARGUMENTS — optional issue number.
 
+**Step 0 — GitHub access mode.** Run `command -v gh >/dev/null 2>&1 && gh auth status >/dev/null 2>&1 && echo GH_CLI || echo MCP` once. If the result is `MCP` (Claude Code cloud/remote sessions, where `gh` is not installed), every `gh` snippet below describes intent — execute the equivalent `mcp__github__*` tool per the mapping in `docs/auto/github-access.md`. All other instructions (git commands, state machine, gates) are unchanged. MCP mode is first-class, not a blocker.
+
 ---
 
 ## Step 1: Identify the Issue
@@ -23,9 +25,9 @@ If not on an issue branch and no argument given, stop: "No issue number provided
 
 **Detect the repo:**
 ```
-REPO=$(gh repo view --json nameWithOwner --jq '.nameWithOwner')
+REPO=$(git remote get-url origin | sed -E 's#.*[:/]([^/]+/[^/]+?)(\.git)?$#\1#')
 ```
-Use `$REPO` in all `gh api repos/$REPO/...` calls. Never hardcode the repo path.
+Use `$REPO` in all `gh api repos/$REPO/...` calls (or as `owner`/`repo` for MCP tools). Never hardcode the repo path.
 
 **Read the issue:**
 ```
@@ -391,4 +393,5 @@ Report: "Issue #{number} merged to `main`. The `pr-issue-sync.yml` automation wi
 - **CI pending → stop.** If CI is still running, report that and wait. Tell the user to re-invoke when CI completes, or use `/loop 2m /auto {N}` for auto-polling.
 - **Fully materialized context.** Every sub-agent invocation includes verbatim problem statements and criteria, not references to "read the issue."
 - **Gate 2 rejection loops automatically.** Rejection triggers re-research, not a stop. Keep driving until approval or explicit user cancellation.
-- **Dynamic repo path.** Always detect the repo with `gh repo view --json nameWithOwner` — never hardcode it.
+- **Dynamic repo path.** Always detect the repo from `git remote get-url origin` — never hardcode it.
+- **Environment-portable.** When `gh` is unavailable (Step 0 result `MCP`), execute every GitHub operation via `mcp__github__*` tools per `docs/auto/github-access.md`. Cloud sessions that assign their own push branch use that branch and link the issue with `Closes #N` in the PR body.
