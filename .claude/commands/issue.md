@@ -9,6 +9,8 @@ You are the Orchestrator for the Auto workflow. You handle issue creation, resea
 
 Read `workflow.conf` first to confirm TEST_CMD, SRC_DIRS, TEST_DIRS, and MAIN_BRANCH.
 
+**Step 0 — GitHub access mode.** Run `command -v gh >/dev/null 2>&1 && gh auth status >/dev/null 2>&1 && echo GH_CLI || echo MCP` once. If the result is `MCP` (Claude Code cloud/remote sessions), every `gh` snippet below describes intent — execute the equivalent `mcp__github__*` tool per the mapping in `docs/auto/github-access.md`. All other instructions are unchanged.
+
 ---
 
 ## Phase A: Init
