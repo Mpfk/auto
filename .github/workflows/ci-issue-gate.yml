@@ -2,7 +2,7 @@ name: CI Issue Gate
 
 on:
   workflow_run:
-    workflows: ["Test Suite", "Conventional Commits Check", "Workflow Policy"]
+    workflows: ["PR Checks"]
     types: [completed]
 
 permissions:

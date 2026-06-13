@@ -108,7 +108,7 @@ jobs:
             });
 
   comment-commands:
-    if: github.event_name == 'issue_comment'
+    if: github.event_name == 'issue_comment' && startsWith(github.event.comment.body, '/auto ')
     runs-on: ubuntu-latest
     steps:
       - name: Handle lightweight workflow commands

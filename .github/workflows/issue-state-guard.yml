@@ -2,7 +2,11 @@ name: Issue State Guard
 
 on:
   issues:
-    types: [opened, reopened, edited, labeled, unlabeled]
+    types: [opened, reopened, labeled, unlabeled]
+
+concurrency:
+  group: issue-state-guard-${{ github.event.issue.number }}
+  cancel-in-progress: true
 
 permissions:
   issues: write
