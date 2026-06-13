@@ -45,8 +45,38 @@ supported first-class mode, not a degraded one.
 | `gh pr ready BRANCH` | `mcp__github__update_pull_request` (`draft: false`) | |
 | `gh pr comment N --body "..."` | `mcp__github__add_issue_comment` (pass the PR number as `issue_number`) | |
 | `gh pr merge N --merge --subject S --body B` | `mcp__github__merge_pull_request` (`merge_method: "merge"`, `commit_title`, `commit_message`) | |
+| `gh pr view N --json state,mergedAt,mergeable,mergeStateStatus,isDraft` | `mcp__github__pull_request_read` (method `get`) | Used by `/merge` to verify mergeability and confirm the merge landed |
+| `gh issue close N` | `mcp__github__issue_write` (method `update`, `state: "closed"`) | |
 | `gh api repos/$REPO/git/refs/heads/BR` (existence check) | `mcp__github__list_branches` | |
 | `gh api repos/$REPO/git/refs --method POST ...` (create branch) | `mcp__github__create_branch` (`from_branch: main`) | |
+| `gh api repos/$REPO/issues/N/sub_issues` (list) | *(no MCP endpoint)* — read the parent body checklist (`- [ ] #child`) instead | See **Sub-issues** below |
+| `gh api repos/$REPO/issues/PARENT/sub_issues --method POST -F sub_issue_id=ID` (link) | *(no MCP endpoint)* — write a child checklist into the parent body and a `Parent: #N` line into each child via `mcp__github__issue_write` (method `update`) | See **Sub-issues** below |
+
+## Sub-issues
+
+GitHub's native sub-issue REST API (`/repos/{owner}/{repo}/issues/{number}/sub_issues`)
+is reachable in **GH_CLI mode** via `gh api`. Linking requires the child's numeric
+database **id** (from `gh api repos/$REPO/issues/{child} --jq '.id'`), not its issue
+number.
+
+The GitHub MCP server exposes **no sub-issue endpoint**, so in **MCP mode** the Auto
+commands fall back to a checklist-based linkage that automation and humans can both
+read:
+
+- The parent issue body carries a task list of children: `- [ ] #{child} — {task}`.
+- Each child body carries a `Parent: #{parent}` reference line.
+
+`/auto` reads whichever representation exists when fanning out per-child sub-agents
+(Step 1.5 of `auto.md`).
+
+## Interactive Approval UI (Claude Code only)
+
+The `/issue` (Gate 1) and `/merge` (Gate 2) commands collect approval through the
+Claude Code **AskUserQuestion** selection UI (Approve / Deny / Other) rather than
+asking the user to type "approve". This is a Claude Code feature with **no Copilot
+equivalent** — the Copilot agent definitions in `.github/agents/` keep the plain-text
+"Gate N: Approve…?" prompt. `/auto` is fully autonomous and presents no gate UI in
+either environment.
 
 ## Cloud-Session Constraints
 
