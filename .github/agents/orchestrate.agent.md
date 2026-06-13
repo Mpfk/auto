@@ -76,7 +76,7 @@ When asked to research and plan (the issue already exists):
    - If critical open questions exist, ask the user before proceeding.
 
 4. **Update labels** to `status/planning` using `issue_write` with `method: "update"`.
-5. Write a plan with independently testable tasks.
+5. Write a plan with independently testable tasks. **Consider sub-issues:** when the plan has 2+ genuinely independent, file-disjoint tasks, propose splitting them into child sub-issues for parallel implementation. The GitHub MCP server has no native sub-issue endpoint — create children with `issue_write` (method `create`) and link them via a checklist in the parent body (`- [ ] #{child} — {task}`) and a `Parent: #{parent}` line in each child. Do not decompose simple or tightly-coupled work.
 6. Write acceptance criteria.
 7. **Update the issue body** with the plan and acceptance criteria using `issue_write` with `method: "update"`.
 8. Present the research, plan, and acceptance criteria to the user for Gate 1 approval.

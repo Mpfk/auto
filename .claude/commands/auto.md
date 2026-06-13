@@ -1,9 +1,11 @@
 ---
-description: Auto-drive the full workflow for an issue from its current state. Chains all phases automatically — research, planning, implementation, CI monitoring, review — pausing only at Gate 1 and Gate 2. The star feature of the Auto workflow.
+description: Auto-drive the full workflow for an issue from its current state. Chains every phase automatically — research, planning, implementation, CI monitoring, review, and merge — running fully autonomously end-to-end without pausing for approval.
 argument-hint: Optional issue number (auto-detects from current branch if omitted)
 ---
 
-You are the Progress Driver. You autonomously execute the Auto workflow for a given issue, reading its current state and driving all remaining phases without prompting the user — pausing only at Gate 1 and Gate 2.
+You are the Progress Driver. You autonomously execute the entire Auto workflow for a given issue, reading its current state and driving all remaining phases through to merge **without prompting the user**.
+
+**Fully autonomous by default.** `/auto` self-approves both Gate 1 (plan) and Gate 2 (merge) and merges to `main` without stopping. The gates still exist as decision points — they are simply auto-approved here. A human who wants to inspect a gate runs the standalone commands instead: `/issue` presents Gate 1 via the Approve/Deny selection UI, and `/merge` presents Gate 2 via the selection UI. `/auto` itself never waits for approval.
 
 **Input:** $ARGUMENTS — optional issue number.
 
@@ -38,6 +40,28 @@ gh issue view {issue_number} --json number,title,labels,body \
 If `status/done` or `status/cancelled`, report it and stop.
 
 If no `status/*` label exists, treat as `status/draft`.
+
+---
+
+## Step 1.5: Parent Issue with Sub-Issues
+
+Check whether this issue is a **parent** that was decomposed into sub-issues (see `/issue`'s sub-issue logic):
+```
+gh api repos/$REPO/issues/{number}/sub_issues --jq 'length'   # GH_CLI mode
+```
+In MCP mode, sub-issues are tracked as a checklist in the parent body (`- [ ] #child`) — read the parent body and extract the referenced child issue numbers instead.
+
+**If the issue has sub-issues**, do not implement the parent directly — drive its children, then merge the parent:
+
+1. List the child issue numbers and their `status/*` labels.
+2. Apply the concurrency strategy from the "Managing Autonomous Sub-agent Teams" section of `CLAUDE.md`:
+   - **File-disjoint children** (the normal case — `/issue` only creates sub-issues when tasks split cleanly): spawn one `/auto {child}` sub-agent per child **in parallel**, each with `isolation: "worktree"`. Give each sub-agent fully materialized context (its child issue's plan and acceptance criteria verbatim) and explicit authority to self-approve both gates within this autonomous run.
+   - **Any children that touch overlapping files:** serialize those — spawn the next only after the prior child's PR merges.
+3. Wait for all child sub-agents to merge their PRs to `main`.
+4. Pull `main` and confirm each child landed (append `&& echo _PULL_DONE_` and verify the sentinel).
+5. Once all children are `status/done`, run `/merge {number}` on the parent if it has its own integration PR; otherwise close the parent (`gh issue close {number}` and set `status/done`) since its work is fully delivered by the merged children.
+
+**If the issue has no sub-issues**, proceed to the State Machine below as a single unit of work.
 
 ---
 
@@ -115,42 +139,26 @@ Research and planning is needed.
 
 10. **Update issue body** with the complete Research, Plan, and Acceptance Criteria sections.
 
-11. **PAUSE — Gate 1.** Present to the user:
-    - Research summary (key findings, constraints, open questions)
-    - Proposed plan (numbered tasks)
-    - Acceptance criteria
-
-    > **Gate 1: Approve this plan for issue #{number}?**
-    > Reply "approve" to set `status/ready` and begin implementation.
-    > Provide feedback to revise.
-
-    **STOP.** Do not proceed until explicit "approve" or revision feedback from the user.
-
-    On approval:
+11. **Gate 1 — self-approved (autonomous).** Post a brief plan summary as an issue comment for the record (key findings, numbered tasks, acceptance criteria), then advance without pausing:
     ```
     gh issue edit {number} --remove-label "status/planning" --add-label "status/ready"
     ```
+    `/auto` is fully autonomous — it does not stop for Gate 1 approval. (A human who wants to review the plan before implementation runs `/issue {number}` instead, which presents Gate 1 via the selection UI.)
+
     Then immediately fall through to the `status/ready` handler below.
 
 ---
 
 ### STATUS: `status/planning`
 
-Plan was drafted but Gate 1 hasn't been confirmed yet.
+A plan was drafted but `status/ready` hasn't been set yet.
 
 1. Read the issue body for the existing plan and acceptance criteria.
-2. **PAUSE — Gate 1.** Present the plan as-is.
-
-   > **Gate 1: Approve this plan for issue #{number}?**
-   > Reply "approve" to set `status/ready` and begin implementation.
-
-   **STOP.** Wait for user approval or revision feedback.
-
-   On approval:
+2. **Gate 1 — self-approved (autonomous).** `/auto` does not pause for plan approval. Advance directly:
    ```
    gh issue edit {number} --remove-label "status/planning" --add-label "status/ready"
    ```
-   Fall through to `status/ready` handler below.
+   Fall through to the `status/ready` handler below. (To review a plan before it advances, a human runs `/issue {number}`, which presents Gate 1 via the selection UI.)
 
 ---
 
@@ -302,96 +310,47 @@ CI is green. Run the Review Agent.
    - Push, wait for CI (`gh pr checks`), re-check once CI completes, re-run review. Loop until PASS.
 
 6. **If Review returns PASS and CI is confirmed green:**
-   - Convert PR from draft to ready-for-review:
-     ```
-     gh pr ready issue/{number}
-     ```
-   - Gather diff stats for Gate 2 presentation:
-     ```
-     git fetch origin
-     git diff main..issue/{number} --stat
-     git log main..issue/{number} --oneline
-     ```
-
-   - **PAUSE — Gate 2.** Present to the user:
-     - Review summary (PASS — include the reviewer's specific summary)
-     - Most recent retrospective (from issue comments)
-     - Diff stats (files changed, insertions, deletions)
-     - Commit log
-     - PR link: `gh pr view $PR_NUMBER --json url --jq '.url'`
-     - Proposed merge commit message: `feat({scope}): {issue title} (#$PR_NUMBER)`
-
-     > **Gate 2: Approve merge of issue #{number} (PR #$PR_NUMBER) to `main`?**
-     > Reply "approve" to merge.
-     > Reply "reject" with specific feedback to loop back to research.
-
-     **STOP.** Do not proceed until explicit "approve" or "reject" + feedback.
+   - **Gate 2 — self-approved (autonomous).** `/auto` does not pause for merge approval. Drive the merge by following the steps in `.claude/commands/merge.md` in **autonomous mode** (self-approve — do **not** call AskUserQuestion):
+     - Verify the four merge prerequisites (`status/review`, CI green, Review PASS, mergeable).
+     - Ready the PR (`gh pr ready issue/{number}`).
+     - Merge with the conventional subject and verify success (PR `MERGED`, issue closed `status/done`, `main` advanced).
+   - This is the same logic a human gets from `/merge {number}`, minus the interactive Gate 2 prompt. See `## Gate 2 Outcomes` below for the merge command and the rejection loop (the latter is reached only when a human denies via standalone `/merge`).
 
 ---
 
 ## Gate 2 Outcomes
 
-### On Approval
+### On Approval (autonomous — the default `/auto` path)
 
-Merge the PR:
+Merge the PR and verify it landed:
 ```
 gh pr merge $PR_NUMBER \
   --merge \
   --subject "feat({scope}): {issue title} (#$PR_NUMBER)" \
   --body "Closes #{number}"
 ```
+Use the type matching the issue (`feat`/`fix`/`refactor`/`docs`/`chore`), not always `feat`. Then verify success per `merge.md` Step 5: PR `state == MERGED`, issue closed and `status/done` (set manually if `pr-issue-sync.yml` hasn't fired), and `main` advanced.
 
-Report: "Issue #{number} merged to `main`. The `pr-issue-sync.yml` automation will set `status/done` and close the issue."
+Report: "✅ Issue #{number} merged to `main` and closed (`status/done`)."
 
 **Done.**
 
 ---
 
-### On Rejection
+### On Rejection (only when a human denies via standalone `/merge`)
 
-1. Count retrospectives:
-   ```
-   gh issue view {number} --json comments --jq '[.comments[] | select(.body | contains("## Retrospective — Iteration"))] | length'
-   ```
-   N = count + 1.
-
-2. Post rejection retrospective with the user's verbatim feedback:
-   ```
-   gh issue comment {number} --body "## Retrospective — Iteration {N}
-
-   ### Gate 2 Rejection
-
-   **User feedback:**
-   {exact feedback provided by user — do not paraphrase}
-
-   ### What was attempted in this iteration
-   {summary of implementation work done}
-
-   ### Changes needed based on feedback
-   {specific changes implied by the feedback}
-
-   ### Recommendations for next iteration
-   {concrete research angles and plan changes for the next cycle}
-   "
-   ```
-
-3. Reset status to `status/researching`:
-   ```
-   gh issue edit {number} --remove-label "status/review" --add-label "status/researching"
-   ```
-
-4. **Automatically loop back** to the `status/draft` / `status/researching` handler above. The prior retrospective will be included in each research sub-agent's context. Run the full research → plan → Gate 1 → implement → review cycle again with the user's feedback incorporated.
+`/auto` never rejects at Gate 2 on its own — it self-approves. This loop exists for the case where a human ran `/merge {number}` directly and denied. When that happens, `/merge` posts the `## Retrospective — Iteration N` comment (with the user's verbatim feedback) and resets the issue to `status/researching`. A subsequent `/auto {number}` then re-enters at the `status/researching` handler above; the prior retrospective is included in each research sub-agent's context, and the full research → plan → implement → review → merge cycle runs again with the feedback incorporated.
 
 ---
 
 ## Behavioral Contracts
 
-- **Never skip gates.** Gate 1 and Gate 2 are absolute hard stops requiring explicit "approve" from the user.
-- **Never auto-approve.** If the user has not responded to a gate prompt, do not proceed.
-- **Delegated gate authority.** When `/auto` is itself invoked as an autonomous sub-agent whose spawn prompt *explicitly* delegates gate approval — see "Managing Autonomous Sub-agent Teams" in `CLAUDE.md` — it may self-approve only the gates named in that grant. Absent such an explicit delegation, the two contracts above hold and gates remain hard stops.
+- **Fully autonomous.** `/auto` self-approves Gate 1 and Gate 2 and merges to `main` without prompting. It does not wait for user input at any phase. (Interactive gate review lives in the standalone `/issue` and `/merge` commands, which use the Approve/Deny selection UI.)
+- **Gates still gate on facts, not on people.** Auto-approval is not "skip the checks." Gate 1 still requires a synthesized plan and acceptance criteria; Gate 2 still requires `status/review`, CI green, a Review PASS, and a mergeable PR. A failure in any of these is a hard stop — autonomy removes the *human pause*, never the *quality bar*.
+- **Verify the merge.** Never assume a merge succeeded. Confirm PR `state == MERGED`, the issue closed at `status/done`, and `main` advanced (per `merge.md` Step 5).
 - **Idempotent.** Running `/auto {N}` multiple times is safe — it reads state and continues from exactly where it left off.
-- **CI pending → stop.** If CI is still running, report that and wait. Tell the user to re-invoke when CI completes, or use `/loop 2m /auto {N}` for auto-polling.
+- **CI pending → stop and poll.** A single command invocation cannot block on CI. If CI is still running, report that and stop; tell the user to re-invoke when CI completes, or use `/loop 2m /auto {N}` for auto-polling. (This is a practical wait, not an approval gate.)
+- **Sub-issue fan-out.** A parent issue with sub-issues is driven by spawning one `/auto {child}` sub-agent per child (Step 1.5), per the "Managing Autonomous Sub-agent Teams" pattern in `CLAUDE.md`.
 - **Fully materialized context.** Every sub-agent invocation includes verbatim problem statements and criteria, not references to "read the issue."
-- **Gate 2 rejection loops automatically.** Rejection triggers re-research, not a stop. Keep driving until approval or explicit user cancellation.
 - **Dynamic repo path.** Always detect the repo from `git remote get-url origin` — never hardcode it.
 - **Environment-portable.** When `gh` is unavailable (Step 0 result `MCP`), execute every GitHub operation via `mcp__github__*` tools per `docs/auto/github-access.md`. Cloud sessions that assign their own push branch use that branch and link the issue with `Closes #N` in the PR body.
