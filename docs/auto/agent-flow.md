@@ -318,8 +318,21 @@ A Copilot PostToolUse hook. After file edits, reminds the agent to check whether
 
 ### `.github/workflows/`
 
-- **`conventional-commits.yml`** — Validates PR commit messages on every PR.
-- **`test-suite.yml`** — Runs full test suite (from `workflow.conf`) on every PR.
+- **`pr-checks.yml`** (display name **PR Checks**) — Runs three parallel jobs on every PR: `test` (full test suite from `workflow.conf`), `check-commits` (Conventional Commits validation), and `policy` (workflow policy checks). Replaces the former `test-suite.yml`, `conventional-commits.yml`, and `workflow-policy.yml`, which were merged to reduce CI run fan-out. Job ids are preserved so existing branch-protection required checks keep matching.
+- **`ci-issue-gate.yml`** — Triggers on `workflow_run` completion of **PR Checks**; advances the issue past the CI gate. Fires once per PR push (previously once per separate workflow).
+- **`issue-state-guard.yml`** — Self-heals issue status labels. Has a `concurrency` group keyed on the issue number with `cancel-in-progress: true`, so an unlabel+label transition pair collapses to one effective run.
+- **`issue-native-automation.yml`** — Handles GitHub-native issue automation, including `/auto ` slash-command comments.
+- **`pr-issue-sync.yml`** — Keeps PR and linked issue state in sync.
+- **`repo-setup.yml`** — One-time repository bootstrap (labels, settings).
+- **`labels-sync.yml`** — Syncs the canonical label set to the repo.
+- **`copilot-setup-steps.yml`** — Setup steps for the GitHub Copilot coding agent.
+
+#### CI fan-out / cost notes
+
+- **Merged PR Checks workflow.** Collapsing the three former per-PR workflows into one workflow with three parallel jobs reduces the number of GitHub Actions runs (and the `workflow_run` events that `ci-issue-gate.yml` reacts to) without losing any individual check.
+- **Status-guard concurrency.** A status transition removes one label and adds another, firing two `issue-state-guard.yml` runs in quick succession. The `concurrency` group (keyed on issue number, `cancel-in-progress: true`) collapses these to a single effective run. A manual sole-label removal still triggers an `unlabeled` run, so the guard continues to self-heal a stripped issue back to `status/draft`.
+- **Comment-job prefix guard.** The `comment-commands` job in `issue-native-automation.yml` runs only when the comment body starts with `/auto `, so ordinary comments (develop retrospectives, bot status updates) skip the job and consume no compute.
+- **Branch-protection caveat.** Required status checks are configured manually because the workflow token lacks the scope to set them. The merged workflow preserves the job ids `test`, `check-commits`, and `policy`, so branch protection that references those job names keeps working unchanged. Anyone whose branch protection referenced the old *workflow* names ("Test Suite", "Conventional Commits Check", "Workflow Policy") rather than the job ids must update their required checks to the **PR Checks** workflow / those job names.
 
 ## Git Hooks
 
