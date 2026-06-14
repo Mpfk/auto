@@ -6,6 +6,7 @@ bad_docs=$(git diff --cached --name-only --diff-filter=A \
   | grep -v '^docs/' \
   | grep -v '^README.md$' \
   | grep -v '^CLAUDE.md$' \
+  | grep -v '^CHANGELOG.md$' \
   | grep -v '^\.github/' \
   | grep -v '^\.claude/')
 if [ -n "$bad_docs" ]; then
