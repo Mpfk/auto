@@ -1,0 +1,151 @@
+#!/usr/bin/env bash
+# bin/publish-template — build the consumer-form snapshot of the Auto framework
+# and (optionally) push it to the template repo.
+#
+# Distribution is native-GitHub-only, free, and zero-token. This is a LOCAL
+# maintainer tool: it pushes with your own git credentials. It is deliberately
+# NOT a CI workflow — GITHUB_TOKEN cannot push to another repo, nor modify
+# .github/workflows/** even in the same repo, so a CI version would require a
+# PAT or a cron. Run this by hand as a release step instead.
+#
+# Usage:
+#   bin/publish-template --out DIR [--ref REF]   # build snapshot into DIR (for review/tests)
+#   bin/publish-template --push    [--ref REF]   # build and push to the template repo
+#
+# Options:
+#   --out DIR    Write the snapshot tree to DIR (created fresh; must be empty/new).
+#   --push       Clone the template repo, replace its tree with the snapshot,
+#                commit, and push to its default branch.
+#   --ref REF    Source git ref to snapshot (default: HEAD).
+#   --repo SLUG  Template repo slug for --push (default: Mpfk/auto-template).
+#   -h, --help   Show this help.
+#
+# The snapshot is the framework tree at REF, transformed for consumers:
+#   - pr-checks.yml rewritten to reference Mpfk/auto/...reusable-pr-checks.yml@v1
+#   - reusable-pr-checks.yml dropped (referenced upstream, not hosted)
+#   - framework dev tests and dev-only docs dropped; bin/publish-template dropped
+#   - src/ and tests/ shipped as empty .gitkeep placeholders
+set -euo pipefail
+
+REPO_ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
+TEMPLATE_REPO="Mpfk/auto-template"
+REF="HEAD"
+OUT=""
+DO_PUSH=0
+
+die() { echo "publish-template: $*" >&2; exit 1; }
+
+usage() { sed -n '2,30p' "${BASH_SOURCE[0]}" | sed 's/^# \{0,1\}//'; }
+
+while [[ $# -gt 0 ]]; do
+  case "$1" in
+    --out)  OUT="${2:-}"; [[ -n "$OUT" ]] || die "--out requires a directory"; shift 2 ;;
+    --push) DO_PUSH=1; shift ;;
+    --ref)  REF="${2:-}"; [[ -n "$REF" ]] || die "--ref requires a git ref"; shift 2 ;;
+    --repo) TEMPLATE_REPO="${2:-}"; [[ -n "$TEMPLATE_REPO" ]] || die "--repo requires a slug"; shift 2 ;;
+    -h|--help) usage; exit 0 ;;
+    *) die "unknown argument: $1 (try --help)" ;;
+  esac
+done
+
+[[ "$DO_PUSH" -eq 1 || -n "$OUT" ]] || die "specify --out DIR or --push (try --help)"
+
+# ---------------------------------------------------------------------------
+# build_snapshot DEST — materialise the consumer-form tree at DEST.
+# ---------------------------------------------------------------------------
+build_snapshot() {
+  local dest="$1"
+  mkdir -p "$dest"
+  [[ -z "$(ls -A "$dest" 2>/dev/null)" ]] || die "destination not empty: $dest"
+
+  # Export the tracked tree at REF.
+  git -C "$REPO_ROOT" archive "$REF" | tar -x -C "$dest"
+
+  # Drop the hosted reusable workflow (consumers reference it @v1) and the
+  # weekly sync workflow if it somehow survives in an older ref.
+  rm -f "$dest/.github/workflows/reusable-pr-checks.yml" \
+        "$dest/.github/workflows/auto-sync.yml"
+
+  # Drop any sync-engine remnants (defensive for older refs).
+  rm -f "$dest/bin/auto-sync" "$dest/.auto-framework-paths" "$dest/.autosyncignore" \
+        "$dest/docs/auto/template-propagation.md"
+
+  # Drop maintainer-only tooling.
+  rm -f "$dest/bin/publish-template"
+
+  # Drop dev-only docs (framework release/pilot internals).
+  rm -f "$dest/docs/auto/release-process.md" "$dest/docs/auto/pilot-results.md"
+
+  # Ship src/ and tests/ as empty consumer scaffolding.
+  rm -rf "$dest/src" "$dest/tests"
+  mkdir -p "$dest/src" "$dest/tests"
+  : > "$dest/src/.gitkeep"
+  : > "$dest/tests/.gitkeep"
+
+  # Rewrite pr-checks.yml to the consumer @v1 caller.
+  mkdir -p "$dest/.github/workflows"
+  cat > "$dest/.github/workflows/pr-checks.yml" <<'YAML'
+name: PR Checks
+# Thin caller. The real CI logic is maintained centrally in the Auto framework
+# and referenced by major tag, so your repo receives CI updates automatically —
+# for free, using only the default GITHUB_TOKEN. No sync engine, no token setup.
+#
+# To pin a specific release instead of tracking the major line, change @v1 to a
+# full version tag (e.g. @v0.3.0). A breaking change ships as @v2; you opt in by
+# bumping the ref.
+#
+# The workflow name ("PR Checks") is load-bearing: ci-issue-gate.yml triggers on
+# `workflow_run` for it. Keep it stable.
+on:
+  pull_request:
+    branches: [main]
+
+jobs:
+  checks:
+    uses: Mpfk/auto/.github/workflows/reusable-pr-checks.yml@v1
+    permissions:
+      contents: read
+      issues: read
+      pull-requests: read
+YAML
+}
+
+if [[ -n "$OUT" ]]; then
+  build_snapshot "$OUT"
+  echo "publish-template: snapshot written to $OUT"
+fi
+
+if [[ "$DO_PUSH" -eq 1 ]]; then
+  command -v git >/dev/null || die "git not found"
+  WORK="$(mktemp -d)"
+  trap 'rm -rf "$WORK"' EXIT
+
+  echo "publish-template: cloning $TEMPLATE_REPO ..."
+  git clone --depth 1 "https://github.com/$TEMPLATE_REPO.git" "$WORK/repo" \
+    || die "clone failed (check your git credentials and that $TEMPLATE_REPO exists)"
+
+  SNAP="$WORK/snap"
+  build_snapshot "$SNAP"
+
+  # Replace the template's tracked tree with the snapshot (preserve .git).
+  cd "$WORK/repo"
+  git ls-files -z | xargs -0 rm -f 2>/dev/null || true
+  # Copy snapshot over (including dotfiles), excluding any stray .git.
+  ( cd "$SNAP" && tar --exclude='./.git' -cf - . ) | tar -xf - -C "$WORK/repo"
+
+  git add -A
+  if git diff --cached --quiet; then
+    echo "publish-template: template already up to date — nothing to push."
+    exit 0
+  fi
+
+  SRC_SHA="$(git -C "$REPO_ROOT" rev-parse --short "$REF")"
+  VERSION="$(cat "$REPO_ROOT/.auto-version" 2>/dev/null || echo unknown)"
+  git commit -q -m "chore: sync Auto template to v${VERSION} (${SRC_SHA})
+
+Snapshot of the Auto framework at ${REF} (${SRC_SHA}). CI runs via the
+upstream reusable workflow referenced @v1 — no sync engine, no token setup."
+  echo "publish-template: pushing to $TEMPLATE_REPO ..."
+  git push origin HEAD
+  echo "publish-template: done."
+fi
