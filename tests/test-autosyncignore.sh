@@ -134,7 +134,9 @@ else
     # The sync engine handles this special case explicitly.)
     [[ "$path" == ".autosyncignore" ]] && continue
 
-    if grep -qF "$path" "$IGNORE_FILE"; then
+    # Use exact-line matching (anchored) so that e.g. ".githooks/pre-commit"
+    # does not false-positive match ".githooks/pre-commit.d/..." lines.
+    if grep -qxF "$path" "$IGNORE_FILE"; then
       fail "framework path found in ignore file (overlap!): $path"
     else
       pass "no overlap: $path"
