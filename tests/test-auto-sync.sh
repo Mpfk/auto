@@ -596,6 +596,48 @@ else
 fi
 
 # ---------------------------------------------------------------------------
+# Test 20: no v* tags on upstream — exits non-zero with clear error message
+# ---------------------------------------------------------------------------
+echo ""
+echo "--- Test 20: no v* tags on upstream exits non-zero with helpful message ---"
+
+NO_TAG_UPSTREAM="$(mktemp -d)"
+CONSUMER="$(make_consumer_repo)"
+
+pushd "$NO_TAG_UPSTREAM" > /dev/null
+git init -q
+git config user.email "test@test.com"
+git config user.name "Test"
+printf '0.2.0' > .auto-version
+cat > .auto-framework-paths << 'EOF'
+.auto-version
+EOF
+git add -A
+git commit -q -m "chore: initial (no tags)"
+# Intentionally do NOT create any v* tag
+popd > /dev/null
+
+pushd "$CONSUMER" > /dev/null
+
+result=0
+output=$("$AUTO_SYNC_BIN" --upstream "$NO_TAG_UPSTREAM" --skip-verify 2>&1) || result=$?
+
+if [[ $result -ne 0 ]]; then
+  pass "no-tag upstream exits non-zero (got $result)"
+else
+  fail "no-tag upstream exited 0 (expected non-zero)"
+fi
+
+if echo "$output" | grep -qi "no v\* tags\|no.*tag.*found\|create a release tag\|ERROR.*tag"; then
+  pass "no-tag upstream prints a helpful error message"
+else
+  fail "no-tag upstream did not print a helpful error: '$output'"
+fi
+
+popd > /dev/null
+rm -rf "$NO_TAG_UPSTREAM" "$CONSUMER"
+
+# ---------------------------------------------------------------------------
 # Results
 # ---------------------------------------------------------------------------
 echo ""

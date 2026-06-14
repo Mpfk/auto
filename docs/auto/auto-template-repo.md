@@ -68,6 +68,47 @@ job** (issue #95). On each new release of Auto, the mirror job:
 
 The template always reflects the latest stable release of the framework.
 
+## Snapshot lag
+
+> **Newly created repos should run `bin/auto-sync` once after setup.**
+
+`Mpfk/auto-template` is a **point-in-time snapshot** of the Auto source repo at
+the moment of the most recent release. GitHub template instantiation copies
+exactly what is in the template repo at that instant.
+
+This means any framework files added to `Mpfk/auto` **after** the last release
+(but before the next one) will not appear in freshly instantiated consumer repos.
+They will arrive on the consumer's first `bin/auto-sync` run once a new release
+tag is cut.
+
+**Recommended first step after setup:**
+
+```bash
+bin/auto-sync --skip-verify   # or without --skip-verify for GPG-verified sync
+```
+
+This ensures the consumer starts from the most current stable release rather
+than the snapshot captured when the template was last updated.
+
+## First commit — branch guard
+
+> **New consumer repos must commit to a branch, not `main`.**
+
+The `.githooks/pre-commit.d/010-branch-guard.sh` hook blocks direct commits to
+`main`. This is correct and intentional for ongoing development, but it fires on
+the very first commit too.
+
+Before making your first commit, create an issue branch:
+
+```bash
+git checkout -b issue/1
+git commit -m "chore: initial project setup"
+```
+
+Then open a pull request to merge into `main`. This is the standard Auto
+workflow: all changes flow through `issue/N` branches. See `CLAUDE.md` for the
+full workflow guide.
+
 ## Using the template
 
 ```bash
@@ -78,6 +119,9 @@ cd my-project
 
 # Activate git hooks
 git config core.hooksPath .githooks
+
+# Run an initial sync to catch any post-snapshot framework additions
+bin/auto-sync --skip-verify
 
 # Customise for your project
 # Edit workflow.conf — set TEST_CMD for your language/framework
