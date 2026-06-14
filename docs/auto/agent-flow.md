@@ -364,7 +364,15 @@ A Copilot PostToolUse hook. After file edits, reminds the agent to check whether
 
 ## Git Hooks
 
-Activated by: `git config core.hooksPath .githooks`
+Activated by: `bin/setup-hooks` (runs `git config core.hooksPath .githooks` idempotently).
+
+Run it once per clone **and once in every new worktree**. The path is set
+*relative* (`.githooks`) on purpose: `git worktree` checkouts share the main
+repo's `.git/config`, and Git resolves a relative `core.hooksPath` against each
+working tree's own root, so the single shared value fires hooks correctly in the
+main checkout and every worktree. An absolute value would point all worktrees at
+one fixed directory and silently bypass the hooks elsewhere. `git worktree add`
+does not run the activation for you.
 
 Uses a **dispatcher pattern** — each hook type runs all scripts in its `.d/` subdirectory, keeping rules modular.
 

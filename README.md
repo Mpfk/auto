@@ -86,9 +86,9 @@ These are enforced by git hooks and CI — not just conventions:
 ## Using Auto in your project
 
 1. Go to **[Mpfk/auto-template](https://github.com/Mpfk/auto-template)** → **"Use this template"** → **"Create a new repository"**.
-2. In your new repo, activate the git hooks (once):
+2. In your new repo, activate the git hooks (once per clone, and once in each new worktree):
    ```
-   git config core.hooksPath .githooks
+   bin/setup-hooks   # runs: git config core.hooksPath .githooks
    ```
 3. Enable **Settings → Actions → General → "Allow GitHub Actions to create and approve pull requests"** (lets the sync workflow open update PRs).
 4. *(Optional)* Run the **Auto Framework Sync** workflow once to pull the latest framework files immediately.
@@ -172,7 +172,7 @@ This section is for working on **Auto's source** (this repo) — not for using A
 in a project.
 
 1. Clone this repo.
-2. Activate git hooks (once): `git config core.hooksPath .githooks`
+2. Activate git hooks (once per clone, and once in each new worktree): `bin/setup-hooks` (runs `git config core.hooksPath .githooks`)
 3. *(Copilot only)* Configure MCP write access: [`docs/auto/copilot-cloud-setup.md`](docs/auto/copilot-cloud-setup.md)
 4. Use the same commands as any consumer — `/auto`, or `/issue` + `/merge` — to develop the framework.
 
