@@ -1,0 +1,93 @@
+name: Release Mirror
+
+# One-way mirror: on every release tag push, copy the framework subset
+# (defined in .auto-framework-paths) to the Mpfk/auto-template repository
+# so that freshly-created consumer repos start from a current baseline.
+#
+# REQUIRED SECRET — before tagging the first release, a repo admin must add:
+#
+#   Settings → Secrets and variables → Actions → New repository secret
+#   Name:  MIRROR_TOKEN
+#   Value: A fine-grained PAT scoped to the Mpfk/auto-template repository
+#          with "Contents: Read and write" permission.
+#
+# Without MIRROR_TOKEN the mirror step will fail with a 403. The workflow
+# intentionally uses only the standard actions/checkout Action — no third-party
+# marketplace Actions are permitted in the Auto framework.
+
+on:
+  push:
+    tags:
+      - 'v*'
+  workflow_dispatch:
+    inputs:
+      tag:
+        description: 'Tag to mirror (e.g. v0.1.0)'
+        required: true
+
+permissions:
+  contents: read
+
+jobs:
+  mirror:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Mirror framework files to auto-template
+        env:
+          GH_TOKEN: ${{ secrets.MIRROR_TOKEN }}
+        run: |
+          set -euo pipefail
+
+          TAG="${{ github.ref_name }}"
+          if [ "${{ github.event_name }}" = "workflow_dispatch" ]; then
+            TAG="${{ inputs.tag }}"
+          fi
+          VERSION="${TAG#v}"
+
+          # Clone auto-template using the PAT for write access
+          git clone "https://x-access-token:${GH_TOKEN}@github.com/Mpfk/auto-template.git" /tmp/auto-template
+          cd /tmp/auto-template
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+
+          REPO_ROOT="${{ github.workspace }}"
+
+          # Mirror each path from the canonical allow-list (.auto-framework-paths).
+          # Blank lines and comment lines (# …) are skipped.
+          # Inline comments after the path are stripped before use.
+          while IFS= read -r line; do
+            # Skip blank lines and lines that start with optional whitespace + '#'
+            [[ -z "$line" || "$line" =~ ^[[:space:]]*# ]] && continue
+            # Strip inline comments and trailing whitespace/tabs
+            path="${line%%#*}"
+            path="${path%"${path##*[! 	]}"}"
+            [ -z "$path" ] && continue
+
+            src="$REPO_ROOT/$path"
+            dst="/tmp/auto-template/$path"
+
+            if [ -d "$src" ]; then
+              mkdir -p "$dst"
+              rsync -a --delete "$src/" "$dst/"
+            elif [ -f "$src" ]; then
+              mkdir -p "$(dirname "$dst")"
+              cp "$src" "$dst"
+            fi
+          done < "$REPO_ROOT/.auto-framework-paths"
+
+          # Stamp the version so auto-template consumers know which release they are on
+          echo "$VERSION" > /tmp/auto-template/.auto-version
+
+          # Only commit if something actually changed
+          git add -A
+          if git diff --cached --quiet; then
+            echo "No changes to mirror for $TAG — auto-template is already up to date."
+            exit 0
+          fi
+          git commit -m "chore: mirror Auto framework $TAG"
+          git push origin main
+          echo "Mirrored $TAG to Mpfk/auto-template successfully."
