@@ -72,6 +72,12 @@ pull a new release immediately rather than waiting for the next weekly run.
 
 The template always reflects the latest stable release of the framework.
 
+> **Workflow-file caveat.** GitHub's default `GITHUB_TOKEN` cannot push to
+> `.github/workflows/**`, so by default the sync excludes workflow files and
+> lists them in the PR body for manual apply. To have workflow updates applied
+> automatically, configure the optional `AUTO_SYNC_TOKEN` secret — see
+> [`template-propagation.md`](template-propagation.md#workflow-file-propagation--the-auto_sync_token-opt-in).
+
 ## Snapshot lag
 
 > **Newly created repos should run `bin/auto-sync` once after setup.**
