@@ -154,6 +154,18 @@ else
   fail "CLAUDE.md must document bin/setup-hooks for worktree/clone hook activation"
 fi
 
+# --- 10. release-process.md documents the auto-sync manual-dispatch 422 caveat (#132) ---
+RELEASE_DOC="$ROOT/docs/auto/release-process.md"
+if [ ! -f "$RELEASE_DOC" ]; then
+  fail "docs/auto/release-process.md missing"
+else
+  if grep -qF "422" "$RELEASE_DOC" && grep -qiE 'weekly cron' "$RELEASE_DOC"; then
+    pass "release-process.md documents the manual-dispatch 422 caveat and weekly-cron fallback"
+  else
+    fail "release-process.md verification step must note manual dispatch may 422 until re-registration, with the weekly cron as the reliable fallback"
+  fi
+fi
+
 if [ "$FAILED" -ne 0 ]; then
   echo ""
   echo "Workflow config assertions FAILED."
