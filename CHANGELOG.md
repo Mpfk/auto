@@ -7,6 +7,34 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.2.0] - 2026-06-14
+
+First properly signed release. Supersedes the unsigned `v0.1.0` pilot tag.
+
+### Added
+
+- Template propagation system: consumer repos receive framework updates as reviewed PRs (`bin/auto-sync`, weekly `auto-sync.yml`).
+- Ownership contracts: `.auto-framework-paths` (always-sync allow-list) and `.autosyncignore` (never-overwrite consumer files).
+- Two-repo topology: `Mpfk/auto` (framework source) and `Mpfk/auto-template` (the template consumers instantiate).
+- Semantic versioning artefacts: `CHANGELOG.md`, `.auto-version` stamp, and the signed-tag release process (`docs/auto/release-process.md`, `docs/auto/UPGRADING.md`).
+- `bin/setup-hooks` — idempotent git-hook activation that works correctly inside git worktrees.
+- Documentation: `docs/auto/template-propagation.md`, `docs/auto/file-buckets.md`, `docs/auto/auto-template-repo.md`, `docs/auto/hook-extension.md`, `docs/auto/pilot-results.md`.
+
+### Changed
+
+- Rewrote `README.md` to be clearer and user-facing — leads with how the workflow works, with a horizontal pipeline diagram.
+- `pr-issue-sync` now derives the linked issue's status from the PR's draft state (`status/in-progress` for drafts, `status/review` for ready PRs).
+- `bin/auto-sync` emits a clear error when no upstream `v*` tag exists; documented template snapshot lag and the branch-guard first-run behavior.
+
+### Fixed
+
+- CI `policy` gate no longer races the `pr-issue-sync` label update — ready PRs pass on the first run without a manual label swap.
+- Git hooks now fire inside worktrees (relative `core.hooksPath` resolves per working tree).
+
+### Removed
+
+- `release-mirror.yml` and the `MIRROR_TOKEN` cross-repo PAT requirement — `auto-template` now self-updates via its own `auto-sync.yml` using `GITHUB_TOKEN` only (no secrets to manage).
+
 ## [0.1.0] - 2024-01-01
 
 ### Added
@@ -20,5 +48,6 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Copilot agent definitions (`.github/agents/`) for GitHub-native orchestration.
 - Documentation: `docs/auto/agent-flow.md`, `docs/auto/github-access.md`, `docs/auto/copilot-cloud-setup.md`.
 
-[Unreleased]: https://github.com/Mpfk/auto/compare/v0.1.0...HEAD
+[Unreleased]: https://github.com/Mpfk/auto/compare/v0.2.0...HEAD
+[0.2.0]: https://github.com/Mpfk/auto/compare/v0.1.0...v0.2.0
 [0.1.0]: https://github.com/Mpfk/auto/releases/tag/v0.1.0
