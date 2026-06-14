@@ -221,6 +221,50 @@ for wf_file in "$WF"/*.yml; do
   fi
 done
 
+# --- 12. auto-sync.yml: AUTO_SYNC_TOKEN opt-in for .github/workflows/** (#137) ---
+# GitHub's default GITHUB_TOKEN may not create/update files under
+# .github/workflows/** (push rejected: "without `workflows` permission").
+# Hybrid opt-in fix: default path uses GITHUB_TOKEN and EXCLUDES workflow files
+# (listing them in the PR body for manual apply); when a fine-grained
+# AUTO_SYNC_TOKEN secret is present it is used for checkout + push so workflow
+# files propagate too.
+ASYNC="$WF/auto-sync.yml"
+if [ ! -f "$ASYNC" ]; then
+  fail "auto-sync.yml missing"
+else
+  # (a) checkout/push token selection uses AUTO_SYNC_TOKEN with GITHUB_TOKEN fallback.
+  if grep -qF 'secrets.AUTO_SYNC_TOKEN || secrets.GITHUB_TOKEN' "$ASYNC"; then
+    pass "auto-sync.yml selects AUTO_SYNC_TOKEN with GITHUB_TOKEN fallback"
+  else
+    fail "auto-sync.yml must use \${{ secrets.AUTO_SYNC_TOKEN || secrets.GITHUB_TOKEN }}"
+  fi
+
+  # (b) when the opt-in token is absent, workflow files under .github/workflows/
+  #     are excluded from the commit (reverted before git add).
+  if grep -qE 'git checkout -- \.github/workflows' "$ASYNC"; then
+    pass "auto-sync.yml excludes .github/workflows/ when opt-in token is absent"
+  else
+    fail "auto-sync.yml must revert/exclude .github/workflows/ changes when AUTO_SYNC_TOKEN is unset (git checkout -- .github/workflows/)"
+  fi
+
+  # (c) the secret is tested via an env var, never inlined into shell beyond the env mapping.
+  if grep -qE 'AUTO_SYNC_TOKEN:\s*\$\{\{\s*secrets\.AUTO_SYNC_TOKEN' "$ASYNC"; then
+    pass "auto-sync.yml maps AUTO_SYNC_TOKEN through env: (no raw shell interpolation)"
+  else
+    fail "auto-sync.yml must expose AUTO_SYNC_TOKEN through an env: mapping for the shell test"
+  fi
+fi
+
+# --- 13. template-propagation.md documents the AUTO_SYNC_TOKEN opt-in (#137) ---
+PROP_DOC="$ROOT/docs/auto/template-propagation.md"
+if [ ! -f "$PROP_DOC" ]; then
+  fail "docs/auto/template-propagation.md missing"
+elif grep -qF "AUTO_SYNC_TOKEN" "$PROP_DOC"; then
+  pass "template-propagation.md documents the AUTO_SYNC_TOKEN opt-in"
+else
+  fail "template-propagation.md must document the AUTO_SYNC_TOKEN opt-in for workflow-file sync"
+fi
+
 if [ "$FAILED" -ne 0 ]; then
   echo ""
   echo "Workflow config assertions FAILED."

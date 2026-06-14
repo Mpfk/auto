@@ -193,6 +193,39 @@ Retained: **semver git tags** on Auto, a **`CHANGELOG.md`**, the
 `.auto-version` stamp so the sync can detect "behind." No `auto-manifest.yml`
 needed — the ignore file plus the script's path list cover it.
 
+### Workflow-file propagation — the `AUTO_SYNC_TOKEN` opt-in
+
+GitHub forbids the default `GITHUB_TOKEN` from creating or updating files under
+`.github/workflows/**` (a hard platform rule — the push is rejected with
+*"refusing to allow a GitHub App to create or update workflow … without
+`workflows` permission"*). `auto-sync.yml` is itself a workflow file, so without
+mitigation a sync that touched any workflow would fail the entire push.
+
+The sync workflow handles this with a **hybrid opt-in**:
+
+| Mode | Secret | Behavior |
+|------|--------|----------|
+| **Default** | none | Syncs everything **except** `.github/workflows/**` using `GITHUB_TOKEN`. Works out of the box, zero secrets. If the upstream sync would have changed any workflow files, those paths are **listed in the sync PR body** under *"⚠️ Workflow files changed upstream — apply manually"* so you can copy them by hand from `Mpfk/auto`. |
+| **Opt-in** | `AUTO_SYNC_TOKEN` | The token is used for both checkout and push, so `.github/workflows/**` propagates automatically with the rest of the sync. No manual-apply note needed. |
+
+**Configuring the opt-in (`AUTO_SYNC_TOKEN`):**
+
+1. Create a **fine-grained personal access token** scoped to **only your own
+   consumer repo** with these repository permissions:
+   - **Contents:** Read and write
+   - **Workflows:** Read and write
+   - **Pull requests:** Read and write
+2. Add it as a repository secret named `AUTO_SYNC_TOKEN`
+   (Settings → Secrets and variables → Actions → New repository secret).
+
+That's it — `auto-sync.yml` prefers `AUTO_SYNC_TOKEN` when present and silently
+falls back to `GITHUB_TOKEN` when it is absent. The secret is **optional**;
+leaving it unset just means workflow-file updates are surfaced for manual
+application instead of being applied automatically.
+
+> Scope the token to the single consumer repo. It is never sent upstream — it is
+> only used by the consumer's own Actions run to push the sync branch.
+
 ### Known gotcha — GITHUB_TOKEN and CI on the sync PR
 
 PRs opened by the default `GITHUB_TOKEN` do **not** trigger other workflows
@@ -226,7 +259,10 @@ One-time setup after creation:
 3. **Enable Actions to open PRs:** Settings → Actions → General → *"Allow GitHub
    Actions to create and approve pull requests"* (off by default on new repos —
    this is the only genuinely new step).
-4. *(Optional)* Run `auto-sync.yml` via **Run workflow** (manual dispatch) once to
+4. *(Optional)* Add an `AUTO_SYNC_TOKEN` secret if you want `.github/workflows/**`
+   updates applied automatically (see *Workflow-file propagation* above). Without
+   it, workflow-file changes are listed in the sync PR for manual apply.
+5. *(Optional)* Run `auto-sync.yml` via **Run workflow** (manual dispatch) once to
    pull the latest immediately, instead of waiting for the first scheduled run.
 
 Thereafter the scheduled workflow runs on its own and opens an update PR whenever
