@@ -26,7 +26,14 @@ permissions: `contents: write` and `pull-requests: write`.
 
 Auto uses a vendored-sync distribution model:
 
-- **Auto source repo** (`Mpfk/auto`) — where the framework lives and is developed.
+| Repo | Role | GitHub "template"? |
+|------|------|--------------------|
+| `Mpfk/auto` | Framework source — developed here, not for consumers to fork | **No** |
+| `Mpfk/auto-template` | Consumer entry-point — click "Use this template" to start | **Yes** |
+
+- **Auto source repo** (`Mpfk/auto`) — where the framework lives and is
+  developed. **Not** a GitHub template repository; consumers should never
+  fork or instantiate it directly. Use `Mpfk/auto-template` instead.
 - **`Mpfk/auto-template`** ([github.com/Mpfk/auto-template](https://github.com/Mpfk/auto-template))
   — a GitHub template repository that consumers instantiate via "Use this
   template". It is bootstrapped with every framework file, config seeds, and
