@@ -22,7 +22,7 @@ developed on its own `issue/{number}` branch, implemented test-first, and
 documented before it reaches `main`.
 
 ```mermaid
-flowchart TD
+flowchart LR
     A([You describe what you need]) --> B[Create GitHub Issue]
     B --> C[Research agents investigate in parallel]
     C --> D[Synthesize findings + write plan]
