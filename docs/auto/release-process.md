@@ -14,18 +14,6 @@ This document describes how to cut a new release of Auto. Releases produce a sem
 > created and pushed before `bin/auto-sync` is usable by any consumer repo.**
 > Follow the [Release steps](#release-steps) below to create that first tag.
 
-## Initial setup
-
-Before cutting the first release tag, a repo admin must configure the secret that the release mirror job uses to push framework files to `Mpfk/auto-template`:
-
-1. Go to **Settings → Secrets and variables → Actions** in the `Mpfk/auto` repository.
-2. Click **New repository secret**.
-3. Set **Name** to `MIRROR_TOKEN`.
-4. Set **Value** to a [fine-grained personal access token](https://github.com/settings/tokens?type=beta) scoped to the `Mpfk/auto-template` repository with **Contents: Read and write** permission.
-5. Save the secret.
-
-Without `MIRROR_TOKEN` the release mirror job (`.github/workflows/release-mirror.yml`) will fail with a 403 on push. This is a one-time setup; no further action is needed between releases.
-
 ## Version format
 
 Auto uses [Semantic Versioning](https://semver.org/spec/v2.0.0.html): `MAJOR.MINOR.PATCH`.
@@ -107,18 +95,18 @@ git push origin vX.Y.Z
 
 Push the tag separately from the branch. Do not use `git push --tags` as that would push all local tags.
 
-### 7. Trigger the release mirror
+### 7. Template update
 
-After the tag lands on `origin`, the release mirror job (see issue #95) automatically pushes the tagged commit to the `auto-template` mirror repository. Consumer repos running `bin/auto-sync` will detect the new tag on their next sync run.
+No secrets required. `auto-template` runs `auto-sync.yml` on a weekly schedule, which pulls from the public `Mpfk/auto` repo using its own `GITHUB_TOKEN`. After the tag lands on `origin`, the next scheduled `auto-sync.yml` run in `auto-template` will detect the new release tag and open a PR to update the template. Consumer repos running `bin/auto-sync` will detect the new tag on their next sync run.
 
 ## Verification
 
 After the tag is pushed, confirm:
 
 1. `git ls-remote --tags origin vX.Y.Z` returns the tag ref.
-2. The GitHub release mirror job completes successfully (check Actions on the `auto-template` repo).
-3. `cat .auto-version` on `main` reads the new version.
-4. `CHANGELOG.md` has the new version section with today's date and a non-empty entry.
+2. `cat .auto-version` on `main` reads the new version.
+3. `CHANGELOG.md` has the new version section with today's date and a non-empty entry.
+4. *(Optional)* Manually trigger `auto-sync.yml` in `auto-template` via Actions → Run workflow to pull the new release immediately rather than waiting for the next weekly schedule.
 
 ## Breaking changes
 

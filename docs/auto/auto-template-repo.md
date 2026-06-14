@@ -57,14 +57,18 @@ Intentionally excluded from the template:
 
 ## How it stays current
 
-The template is kept in sync with the Auto source repo by the **release mirror
-job** (issue #95). On each new release of Auto, the mirror job:
+No secrets required. `auto-template` self-updates via its own `auto-sync.yml`
+workflow, which runs on a weekly schedule and pulls from the public `Mpfk/auto`
+repo using its own `GITHUB_TOKEN`. On each run it:
 
-1. Reads the updated `.auto-framework-paths` allow-list from `Mpfk/auto`.
-2. Copies every framework file to `Mpfk/auto-template` (overwriting previous
-   content).
+1. Checks for a new release tag on `Mpfk/auto` (via `bin/auto-sync`).
+2. Copies every framework file listed in `.auto-framework-paths` to
+   `Mpfk/auto-template` (overwriting previous content).
 3. Stamps `.auto-version` with the new version.
-4. Force-pushes a new `main` branch commit to `auto-template`.
+4. Opens a PR for review and merge.
+
+You can also trigger the sync manually from the Actions tab (Run workflow) to
+pull a new release immediately rather than waiting for the next weekly run.
 
 The template always reflects the latest stable release of the framework.
 

@@ -57,17 +57,18 @@ more. Two concerns → two repos.
 - A consumer's `auto-sync.yml` pulls framework updates from **`auto`'s signed
   release tags** — the singular source of truth, preserving the signed-tag security
   model (see Security considerations).
-- On each `auto` release, an automated one-way mirror job refreshes `auto-template`
-  so freshly-created repos don't start far behind (avoids an immediate large
-  catch-up sync PR). This is internal, automatable, and needs no human gate.
+- On each `auto` release, `auto-template`'s own scheduled `auto-sync.yml` workflow
+  refreshes the template so freshly-created repos don't start far behind (avoids an
+  immediate large catch-up sync PR). No secrets required — the workflow uses only
+  `GITHUB_TOKEN` to pull from the public `Mpfk/auto` repo.
 
 ```
         develop + sign release tags
                   │
                   ▼
-            ┌───────────┐   release mirror job   ┌───────────────┐
-            │   auto    │ ─────────────────────▶ │ auto-template │
-            │ (source)  │                         │  (template)   │
+            ┌───────────┐   auto-template's       ┌───────────────┐
+            │   auto    │   auto-sync.yml pulls ▶ │ auto-template │
+            │ (source)  │   (GITHUB_TOKEN only)    │  (template)   │
             └─────┬─────┘                         └───────┬───────┘
                   │                                       │ New from template
    auto-sync pulls│ signed release tags                   ▼
@@ -391,8 +392,9 @@ through the standard Auto workflow (TDD where code is involved).
 ### Phase 3 — Repository split
 - **3.1 Create `auto-template`.** New repo, clean starter contents only; mark as a
   GitHub template repository. *(chore)*
-- **3.2 Release mirror job.** On `auto` release tag, push the framework subset to
-  `auto-template`. *(feat)*
+- **3.2 Template sync via auto-sync.yml.** `auto-template` runs its own `auto-sync.yml`
+  on a weekly schedule to pull framework updates from `Mpfk/auto` using `GITHUB_TOKEN` only.
+  No cross-repo PAT required. *(feat — completed, see issue #119)*
 - **3.3 De-template `auto`.** Remove the template flag from `auto`; strip
   consumer-only assumptions; keep dev tooling. *(chore)*
 

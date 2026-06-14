@@ -102,7 +102,7 @@ created consumer because the template snapshot predated those files.
 run after setup to pull in files added since the template was last refreshed.
 
 **Mitigation (already in place):** `docs/auto/auto-template-repo.md` documents the
-`release-mirror.yml` workflow that keeps the template current. This pilot confirms
+`auto-sync.yml` workflow in `auto-template` that keeps the template current. This pilot confirms
 that `bin/auto-sync` correctly handles the "template is behind" case.
 
 ### F-3: Branch-guard hook blocks pilot setup commits to main
