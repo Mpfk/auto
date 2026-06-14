@@ -581,6 +581,104 @@ popd > /dev/null
 rm -rf "$NO_TAG_UPSTREAM" "$CONSUMER"
 
 # ---------------------------------------------------------------------------
+# Test 21: self-overwrite — running bin/auto-sync IN-PLACE still stamps version
+#
+# Regression test for issue #139: bin/auto-sync lists itself in
+# .auto-framework-paths, so the copy loop overwrites the running script on
+# disk mid-execution. Bash reads scripts lazily, so an unguarded script can
+# truncate its own execution and skip the .auto-version stamp (Step 6),
+# exiting 0 silently while leaving .auto-version stale.
+#
+# This test runs the consumer's OWN bin/auto-sync (the real script under test,
+# copied into the consumer tree and listed in the allow-list) and asserts that
+# after a sync .auto-version advances to the upstream version. It FAILS RED
+# against the unguarded script and PASSES once the body is insulated (e.g. by
+# wrapping the logic in a fully-parsed main() invoked as `main "$@"`).
+# ---------------------------------------------------------------------------
+echo ""
+echo "--- Test 21: in-place self-overwrite still stamps .auto-version (issue #139) ---"
+
+UPSTREAM="$(make_upstream_repo)"
+CONSUMER="$(make_consumer_repo)"
+
+# Produce a copy of the script under test that is large enough to defeat
+# bash's script read-ahead buffer. Bash reads its own source lazily in
+# buffer-sized chunks; the self-overwrite bug manifests when the executable
+# tail (the .auto-version stamp step) has not yet been buffered at the moment
+# the copy loop overwrites the file on disk. We inject a large comment block
+# immediately after the `set -euo pipefail` line so the entire executable
+# body — including the stamp step — is pushed well past the buffer, making
+# the regression deterministic instead of host/size-dependent. Comments are
+# inert, so the padded script behaves identically aside from its size.
+write_padded_script() {
+  local dest="$1"
+  awk '
+    { print }
+    /^set -euo pipefail/ && !done {
+      for (i = 0; i < 700; i++)
+        print "# self-overwrite regression padding xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx"
+      done = 1
+    }
+  ' "$AUTO_SYNC_BIN" > "$dest"
+  chmod +x "$dest"
+}
+
+# Upstream must ship a DIFFERENT bin/auto-sync and list it in the allow-list,
+# so the sync copies a new script over the running one mid-execution.
+pushd "$UPSTREAM" > /dev/null
+mkdir -p bin
+write_padded_script bin/auto-sync
+# Make the upstream copy byte-differ from the consumer copy so cp actually writes.
+printf '\n# upstream marker v0.2.0\n' >> bin/auto-sync
+cat > .auto-framework-paths << 'EOF'
+# Auto framework paths
+bin/auto-sync
+.claude/commands/auto.md
+.auto-version
+.autosyncignore
+EOF
+git add -A
+git commit -q -m "chore: add bin/auto-sync to allow-list"
+# Re-tag to include the new commit
+git tag -d v0.2.0 > /dev/null 2>&1 || true
+git tag -a v0.2.0 -m "Release v0.2.0"
+popd > /dev/null
+
+# Consumer ships its OWN (current) bin/auto-sync — this is the script that will
+# overwrite itself during the run.
+pushd "$CONSUMER" > /dev/null
+mkdir -p bin
+write_padded_script bin/auto-sync
+git add -A
+git commit -q -m "chore: add consumer bin/auto-sync"
+
+result=0
+# Invoke the consumer's IN-TREE script (not $AUTO_SYNC_BIN) so it overwrites itself.
+./bin/auto-sync --upstream "$UPSTREAM" --tag v0.2.0 --skip-verify > "$TMPDIR_ROOT/test21.log" 2>&1 || result=$?
+
+if [[ $result -eq 0 ]]; then
+  pass "in-place self-overwriting sync exited 0"
+else
+  fail "in-place self-overwriting sync exited $result (expected 0)"
+  cat "$TMPDIR_ROOT/test21.log"
+fi
+
+if [[ -f ".auto-version" ]]; then
+  iv=$(cat .auto-version)
+  if [[ "$iv" == "0.2.0" ]]; then
+    pass ".auto-version stamped to 0.2.0 despite bin/auto-sync overwriting itself"
+  else
+    fail ".auto-version is '$iv' (expected 0.2.0) — self-overwrite truncated the stamp step"
+    cat "$TMPDIR_ROOT/test21.log"
+  fi
+else
+  fail ".auto-version missing after in-place self-overwriting sync"
+fi
+
+popd > /dev/null
+rm -rf "$UPSTREAM" "$CONSUMER"
+
+# ---------------------------------------------------------------------------
 # Results
 # ---------------------------------------------------------------------------
 echo ""
