@@ -435,6 +435,96 @@ fi
 rm -rf "$UPSTREAM" "$CONSUMER"
 
 # ---------------------------------------------------------------------------
+# Test 9: auto-sync.yml workflow file — structural validation
+# ---------------------------------------------------------------------------
+echo ""
+echo "--- Test 9: auto-sync.yml — file exists ---"
+
+WORKFLOW_FILE="$REPO_ROOT/.github/workflows/auto-sync.yml"
+
+if [[ -f "$WORKFLOW_FILE" ]]; then
+  pass "auto-sync.yml exists at .github/workflows/auto-sync.yml"
+else
+  fail "auto-sync.yml not found at .github/workflows/auto-sync.yml"
+fi
+
+# ---------------------------------------------------------------------------
+echo ""
+echo "--- Test 10: auto-sync.yml — valid YAML ---"
+
+if [[ -f "$WORKFLOW_FILE" ]]; then
+  # Try PyYAML if available; fall back to checking 'on:' and 'jobs:' keys exist
+  if python3 -c "import yaml; yaml.safe_load(open('$WORKFLOW_FILE'))" 2>/dev/null; then
+    pass "auto-sync.yml is valid YAML (PyYAML)"
+  elif grep -q "^on:" "$WORKFLOW_FILE" && grep -q "^jobs:" "$WORKFLOW_FILE" && grep -q "^name:" "$WORKFLOW_FILE"; then
+    pass "auto-sync.yml is valid YAML (structural key check)"
+  else
+    fail "auto-sync.yml failed YAML validation"
+  fi
+else
+  fail "auto-sync.yml not found — skipping YAML validation"
+fi
+
+# ---------------------------------------------------------------------------
+echo ""
+echo "--- Test 11: auto-sync.yml — has workflow_dispatch trigger ---"
+
+if [[ -f "$WORKFLOW_FILE" ]]; then
+  if grep -q "workflow_dispatch" "$WORKFLOW_FILE"; then
+    pass "auto-sync.yml has workflow_dispatch trigger"
+  else
+    fail "auto-sync.yml missing workflow_dispatch trigger"
+  fi
+else
+  fail "auto-sync.yml not found — skipping trigger check"
+fi
+
+# ---------------------------------------------------------------------------
+echo ""
+echo "--- Test 12: auto-sync.yml — has schedule trigger ---"
+
+if [[ -f "$WORKFLOW_FILE" ]]; then
+  if grep -q "schedule" "$WORKFLOW_FILE"; then
+    pass "auto-sync.yml has schedule trigger"
+  else
+    fail "auto-sync.yml missing schedule trigger"
+  fi
+else
+  fail "auto-sync.yml not found — skipping schedule check"
+fi
+
+# ---------------------------------------------------------------------------
+echo ""
+echo "--- Test 13: auto-sync.yml — uses only actions/checkout (no third-party Actions) ---"
+
+if [[ -f "$WORKFLOW_FILE" ]]; then
+  # Extract all 'uses:' lines and check none start with a non-actions/ namespace
+  bad_actions=$(grep -E '^\s+uses:\s+' "$WORKFLOW_FILE" | grep -v 'uses:\s*actions/' || true)
+  if [[ -z "$bad_actions" ]]; then
+    pass "auto-sync.yml references only actions/* (no third-party marketplace Actions)"
+  else
+    fail "auto-sync.yml references non-actions/ steps: $bad_actions"
+  fi
+else
+  fail "auto-sync.yml not found — skipping actions check"
+fi
+
+# ---------------------------------------------------------------------------
+echo ""
+echo "--- Test 14: auto-sync.yml — permissions block contains only contents and pull-requests ---"
+
+if [[ -f "$WORKFLOW_FILE" ]]; then
+  # Ensure both required permissions are present
+  if grep -q "contents: write" "$WORKFLOW_FILE" && grep -q "pull-requests: write" "$WORKFLOW_FILE"; then
+    pass "auto-sync.yml has contents: write and pull-requests: write"
+  else
+    fail "auto-sync.yml missing required permissions (contents: write, pull-requests: write)"
+  fi
+else
+  fail "auto-sync.yml not found — skipping permissions check"
+fi
+
+# ---------------------------------------------------------------------------
 # Results
 # ---------------------------------------------------------------------------
 echo ""

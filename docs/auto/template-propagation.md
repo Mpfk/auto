@@ -3,6 +3,25 @@
 This document describes how Auto framework updates flow from the **Auto source
 repo** to **consumer repos** that have installed the framework.
 
+## Propagation mechanism
+
+Consumer repos include `.github/workflows/auto-sync.yml` (a framework-owned
+file, propagated by sync itself). This workflow drives the sync automatically:
+
+- **Scheduled:** runs every **Monday at 09:00 UTC** (`cron: '0 9 * * 1'`).
+- **Manual:** can be triggered at any time from the GitHub Actions tab via
+  `workflow_dispatch`.
+
+When the workflow runs it calls `bin/auto-sync --skip-verify`. If upstream is
+ahead, the script updates local framework files and the workflow opens a PR
+(`chore: sync Auto framework to vX.Y.Z`) for review before merging. When
+the consumer is already up to date the workflow exits cleanly without opening
+a PR (no-op).
+
+The workflow uses only `actions/checkout` and the pre-installed `git`/`gh`
+binaries — no third-party marketplace Actions. It declares minimal explicit
+permissions: `contents: write` and `pull-requests: write`.
+
 ## Two-repo topology
 
 Auto uses a vendored-sync distribution model:

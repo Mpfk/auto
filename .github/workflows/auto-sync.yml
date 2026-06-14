@@ -1,0 +1,52 @@
+name: Auto Framework Sync
+
+on:
+  schedule:
+    - cron: '0 9 * * 1'   # Weekly, Monday 09:00 UTC
+  workflow_dispatch:        # Manual trigger from Actions tab
+
+permissions:
+  contents: write
+  pull-requests: write
+
+jobs:
+  sync:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Run auto-sync
+        id: sync
+        run: |
+          chmod +x bin/auto-sync
+          bin/auto-sync --skip-verify
+          if git diff --quiet && git diff --cached --quiet; then
+            echo "changed=false" >> "$GITHUB_OUTPUT"
+          else
+            echo "changed=true" >> "$GITHUB_OUTPUT"
+          fi
+
+      - name: Open PR if changes detected
+        if: steps.sync.outputs.changed == 'true'
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          VERSION=$(cat .auto-version)
+          BRANCH="auto-sync/v${VERSION}"
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+          git checkout -b "$BRANCH"
+          git add -A
+          git commit -m "chore: sync Auto framework to v${VERSION}"
+          git push origin "$BRANCH"
+          gh pr create \
+            --title "chore: sync Auto framework to v${VERSION}" \
+            --body "Automated framework sync from [Mpfk/auto](https://github.com/Mpfk/auto) v${VERSION}.
+
+Review the diff carefully before merging — this updates framework files.
+Your config (\`workflow.conf\`, \`.claude/settings.json\`) and consumer hooks (\`1xx-\` scripts) are untouched per \`.autosyncignore\`.
+
+See [\`docs/auto/template-propagation.md\`](docs/auto/template-propagation.md) for the ownership model." \
+            --label "chore"
