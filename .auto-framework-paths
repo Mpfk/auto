@@ -74,7 +74,6 @@
 # GitHub Actions workflows
 # ---------------------------------------------------------------------------
 .github/workflows/auto-sync.yml
-.github/workflows/release-mirror.yml
 .github/workflows/ci-issue-gate.yml
 .github/workflows/copilot-setup-steps.yml
 .github/workflows/issue-native-automation.yml

@@ -525,74 +525,17 @@ else
 fi
 
 # ---------------------------------------------------------------------------
-# Test 15: release-mirror.yml — file exists
+# Test 15: release-mirror.yml — file must NOT exist (removed in issue #119)
 # ---------------------------------------------------------------------------
 echo ""
-echo "--- Test 15: release-mirror.yml — file exists ---"
+echo "--- Test 15: release-mirror.yml — must not exist (PAT-free mirror via auto-template) ---"
 
 MIRROR_WORKFLOW="$REPO_ROOT/.github/workflows/release-mirror.yml"
 
-if [[ -f "$MIRROR_WORKFLOW" ]]; then
-  pass "release-mirror.yml exists at .github/workflows/release-mirror.yml"
+if [[ ! -f "$MIRROR_WORKFLOW" ]]; then
+  pass "release-mirror.yml correctly absent — auto-template self-updates via its own auto-sync.yml"
 else
-  fail "release-mirror.yml not found at .github/workflows/release-mirror.yml"
-fi
-
-# ---------------------------------------------------------------------------
-echo ""
-echo "--- Test 16: release-mirror.yml — triggers on push with tags: ['v*'] ---"
-
-if [[ -f "$MIRROR_WORKFLOW" ]]; then
-  if grep -q "push" "$MIRROR_WORKFLOW" && grep -qE "'v\*'|\"v\*\"" "$MIRROR_WORKFLOW"; then
-    pass "release-mirror.yml triggers on push tags: ['v*']"
-  else
-    fail "release-mirror.yml missing push tag trigger for 'v*'"
-  fi
-else
-  fail "release-mirror.yml not found — skipping trigger check"
-fi
-
-# ---------------------------------------------------------------------------
-echo ""
-echo "--- Test 17: release-mirror.yml — has workflow_dispatch trigger ---"
-
-if [[ -f "$MIRROR_WORKFLOW" ]]; then
-  if grep -q "workflow_dispatch" "$MIRROR_WORKFLOW"; then
-    pass "release-mirror.yml has workflow_dispatch trigger"
-  else
-    fail "release-mirror.yml missing workflow_dispatch trigger"
-  fi
-else
-  fail "release-mirror.yml not found — skipping workflow_dispatch check"
-fi
-
-# ---------------------------------------------------------------------------
-echo ""
-echo "--- Test 18: release-mirror.yml — uses only actions/checkout (no third-party Actions) ---"
-
-if [[ -f "$MIRROR_WORKFLOW" ]]; then
-  bad_actions=$(grep -E '^\s+uses:\s+' "$MIRROR_WORKFLOW" | grep -v 'uses:\s*actions/' || true)
-  if [[ -z "$bad_actions" ]]; then
-    pass "release-mirror.yml references only actions/* (no third-party marketplace Actions)"
-  else
-    fail "release-mirror.yml references non-actions/ steps: $bad_actions"
-  fi
-else
-  fail "release-mirror.yml not found — skipping actions check"
-fi
-
-# ---------------------------------------------------------------------------
-echo ""
-echo "--- Test 19: release-mirror.yml — has permissions block ---"
-
-if [[ -f "$MIRROR_WORKFLOW" ]]; then
-  if grep -q "^permissions:" "$MIRROR_WORKFLOW"; then
-    pass "release-mirror.yml has top-level permissions block"
-  else
-    fail "release-mirror.yml missing top-level permissions block"
-  fi
-else
-  fail "release-mirror.yml not found — skipping permissions check"
+  fail "release-mirror.yml still present — it was removed in issue #119 to eliminate MIRROR_TOKEN supply chain risk"
 fi
 
 # ---------------------------------------------------------------------------

@@ -1,175 +1,435 @@
-# Auto — Template Propagation
+# Template Propagation — Architecture & Distribution Model
 
-This document describes how Auto framework updates flow from the **Auto source
-repo** to **consumer repos** that have installed the framework.
+> **Status:** Accepted (2026-06-13). Architecture decided; implementation pending.
+> The build flows through the normal Auto workflow (issue → plan → Gate 1 →
+> develop → review → Gate 2). See the Implementation plan at the end.
 
-## Propagation mechanism
+## Decision summary
 
-Consumer repos include `.github/workflows/auto-sync.yml` (a framework-owned
-file, propagated by sync itself). This workflow drives the sync automatically:
+- **Distribution:** **vendored sync** (not a subscribable package). Files are
+  copied into consumer repos; updates arrive as reviewed PRs.
+- **Mechanism:** first-party only — a vendored `bin/auto-sync` script + a scheduled
+  `auto-sync.yml` workflow that opens a PR via the `gh` CLI. No third-party
+  marketplace Actions (GitHub-official `actions/*` permitted).
+- **Repository topology:** **two repos** — `auto` (framework source of truth + dev
+  home, not a template) and `auto-template` (the clean, instantiable GitHub
+  template). Consumers are born from `auto-template` and sync updates from `auto`'s
+  signed release tags.
+- **Customization model:** *extend, don't edit* — Auto owns files, consumers add
+  files in reserved namespaces (`100+` hook scripts, new commands), enforced by
+  `.autosyncignore`.
 
-- **Scheduled:** runs every **Monday at 09:00 UTC** (`cron: '0 9 * * 1'`).
-- **Manual:** can be triggered at any time from the GitHub Actions tab via
-  `workflow_dispatch`.
+## Problem
 
-When the workflow runs it calls `bin/auto-sync --skip-verify`. If upstream is
-ahead, the script updates local framework files and the workflow opens a PR
-(`chore: sync Auto framework to vX.Y.Z`) for review before merging. When
-the consumer is already up to date the workflow exits cleanly without opening
-a PR (no-op).
+Auto is a GitHub **template repository**. GitHub's template feature copies all
+files into a new repo **once, at creation time, then severs the link**. There is
+no live connection back to the template.
 
-The workflow uses only `actions/checkout` and the pre-installed `git`/`gh`
-binaries — no third-party marketplace Actions. It declares minimal explicit
-permissions: `contents: write` and `pull-requests: write`.
+Consequence: when we fix a bug or add a feature to Auto's framework files (a git
+hook, a slash command, an agent definition, a CI workflow), every downstream repo
+generated from the template keeps its **frozen fork** of that file and never
+receives the update.
 
-## Two-repo topology
+**Goal:** a mechanism to propagate Auto framework updates to consumer repos that is
+safe (never clobbers a consumer's own work), reviewable, and — ideally — rides
+Auto's own issue→PR→gate workflow.
 
-Auto uses a vendored-sync distribution model:
+## Repository topology
 
-| Repo | Role | GitHub "template"? |
-|------|------|--------------------|
-| `Mpfk/auto` | Framework source — developed here, not for consumers to fork | **No** |
-| `Mpfk/auto-template` | Consumer entry-point — click "Use this template" to start | **Yes** |
+Auto is split into **two repositories**, separating "where the framework is
+developed" from "what a new project starts as."
 
-- **Auto source repo** (`Mpfk/auto`) — where the framework lives and is
-  developed. **Not** a GitHub template repository; consumers should never
-  fork or instantiate it directly. Use `Mpfk/auto-template` instead.
-- **`Mpfk/auto-template`** ([github.com/Mpfk/auto-template](https://github.com/Mpfk/auto-template))
-  — a GitHub template repository that consumers instantiate via "Use this
-  template". It is bootstrapped with every framework file, config seeds, and
-  placeholder stubs. The release mirror job (issue #95) keeps it current on
-  each new release. See `docs/auto/auto-template-repo.md` for full details.
-- **Consumer repos** — any project that has installed Auto by clicking "Use this
-  template" on `Mpfk/auto-template` (or an earlier manual copy of the files).
+| Repo | Role | GitHub "template"? | Contains |
+|------|------|--------------------|----------|
+| **`auto`** | Source of truth + dev home. Tags **signed releases**. | No | Framework files, release tooling, RFC/design docs, framework's own CI + tests, contribution docs |
+| **`auto-template`** | Clean, minimal starter that consumers instantiate. | **Yes** | Framework files (mirrored from `auto` on release), `auto-sync.yml`, starter `README`, placeholder `src/`/`tests/`, seed `workflow.conf` |
 
-The sync binary (`bin/auto-sync`, issue #91) reads the canonical allow-list
-(`.auto-framework-paths`) to know which files it owns, propagates updates, and
-reads `.autosyncignore` to know which paths it must never touch.
+**Why split:** GitHub's "New from template" copies the *entire default branch* into
+the new repo. A repo cannot cleanly be both a development home (dev tooling, design
+docs, release automation, issue history) and a pristine starter — that content would
+leak into every consumer and its dev workflows would run inappropriately in consumer
+CI. Best practice: a template repo contains *exactly* the starter state, nothing
+more. Two concerns → two repos.
 
-## Ownership model — "extend, don't edit"
+**Lineage & sync source:**
 
-Every file in a consumer repo falls into one of three buckets (fully classified
-in `docs/auto/file-buckets.md`):
+- Consumers click **"New from template"** on **`auto-template`** (unchanged UX).
+- A consumer's `auto-sync.yml` pulls framework updates from **`auto`'s signed
+  release tags** — the singular source of truth, preserving the signed-tag security
+  model (see Security considerations).
+- On each `auto` release, `auto-template`'s own scheduled `auto-sync.yml` workflow
+  refreshes the template so freshly-created repos don't start far behind (avoids an
+  immediate large catch-up sync PR). No secrets required — the workflow uses only
+  `GITHUB_TOKEN` to pull from the public `Mpfk/auto` repo.
 
-| Bucket | Who owns it | Sync behavior |
-|--------|-------------|---------------|
-| **Framework** | Auto | Overwritten on every sync update |
-| **Config** | Consumer (seeded by Auto once) | Written if missing; never overwritten |
-| **Consumer-owned** | Consumer | Auto never touches |
-
-Consumers customize the framework by **adding** files (e.g. hook extensions in
-the 100+ range, new Claude commands, docs) — never by editing Auto's shipped
-files. Edits to framework files are lost on the next sync.
-
-## The customization contract — `.autosyncignore`
-
-`.autosyncignore` is the enforcement mechanism for the ownership model. It uses
-gitignore syntax and lists every path that `auto-sync` must **never** overwrite,
-including:
-
-- Consumer config files seeded once by Auto (`workflow.conf`,
-  `.claude/settings.json`, `CLAUDE.md`, `README.md`, `.gitignore`)
-- Consumer source and test directories (`src/`, `tests/`)
-- Consumer-owned hook extensions in the 100+ range
-  (`.githooks/*/1[0-9][0-9]-*.sh` — see `docs/auto/hook-extension.md`)
-- The ignore file itself (`.autosyncignore`), so consumer additions survive sync
-
-The complement of `.autosyncignore` is `.auto-framework-paths`, which lists
-every path that Auto _does_ own. Together they form a complete, non-overlapping
-partition of the repo's files.
-
-When `auto-sync` runs an update it:
-
-1. Iterates `.auto-framework-paths` to find files to overwrite.
-2. Skips any path that matches a pattern in `.autosyncignore` (safety net for
-   future entries that might span both lists).
-3. For Config-bucket files, writes only if the file is absent.
-
-## Hook extension convention
-
-Consumers extend Auto's git hooks by dropping scripts into the hook `*.d/`
-dispatcher directories using the 100+ numbering range. Auto's own scripts use
-000–099. See `docs/auto/hook-extension.md` for the full convention.
-
-## Adding a new framework file
-
-When a framework author adds a new file to Auto:
-
-1. Add the path to `.auto-framework-paths`.
-2. Update the Framework bucket table in `docs/auto/file-buckets.md`.
-3. Ensure the path does **not** appear in `.autosyncignore`.
-4. Run `tests/test-framework-paths.sh` and `tests/test-autosyncignore.sh` to
-   confirm correctness.
-
-## Adding a new consumer-owned path
-
-When a new consumer-owned path type is identified:
-
-1. Add the pattern to `.autosyncignore`.
-2. Update the Consumer-owned bucket table in `docs/auto/file-buckets.md`.
-3. Ensure the path does **not** appear in `.auto-framework-paths`.
-4. Run both test scripts to confirm no overlap.
-
-## Consumer onboarding — first-run notes
-
-Two behaviors surprise new consumers on their very first day. Both are correct
-by design; they just need to be known up front.
-
-### Snapshot lag — run `bin/auto-sync` once after setup (F-2)
-
-`Mpfk/auto-template` is a **point-in-time snapshot** of the Auto source repo at
-the last release. If any framework files were added to `Mpfk/auto` after that
-release but before the consumer created their repo, those files will be missing
-until the next sync.
-
-**Fix:** run `bin/auto-sync` once immediately after cloning and configuring your
-new repo:
-
-```bash
-git config core.hooksPath .githooks
-bin/auto-sync --skip-verify   # pull latest stable release
+```
+        develop + sign release tags
+                  │
+                  ▼
+            ┌───────────┐   auto-template's       ┌───────────────┐
+            │   auto    │   auto-sync.yml pulls ▶ │ auto-template │
+            │ (source)  │   (GITHUB_TOKEN only)    │  (template)   │
+            └─────┬─────┘                         └───────┬───────┘
+                  │                                       │ New from template
+   auto-sync pulls│ signed release tags                   ▼
+   framework files│                              ┌───────────────────┐
+                  └─────────────────────────────▶│  consumer repo(s) │
+                                                  └───────────────────┘
 ```
 
-This is safe to run before any consumer code exists. If the consumer is already
-at the latest release version the script exits cleanly with "Already up to date."
+## Core principle
 
-### Branch-guard hook — first commit must be on a branch (F-3)
+> **Every file is owned by exactly one party: Auto *or* the consumer. No file is
+> owned by both.** Customization happens by *adding* files in reserved
+> namespaces, never by *editing* shared ones.
 
-The `.githooks/pre-commit.d/010-branch-guard.sh` hook blocks direct commits to
-`main`. This fires on the very first commit too, which can be surprising.
+This turns "update" from a 3-way merge negotiation into a safe overwrite, which is
+what makes the whole propagation story viable.
 
-**The hook is correct** — all Auto workflow changes flow through `issue/N`
-branches. New consumers must create a branch before their first commit:
+## File ownership model
+
+Every path in a consumer repo falls into one of three buckets:
+
+| Bucket | Paths | Update behavior |
+|--------|-------|-----------------|
+| **Framework** (Auto owns) | `.claude/commands/`, `.githooks/` (Auto-numbered scripts + `lib/` + dispatchers), `docs/auto/`, `.github/agents/`, `.github/workflows/`, `.github/hooks/`, `.github/ISSUE_TEMPLATE/`, `.github/labels.yml`, `.github/copilot-instructions.md`, `.github/pull_request_template.md` | **Overwrite** on update |
+| **Config** (consumer owns, Auto seeds once) | `workflow.conf`, `.claude/settings.json` | **Write if missing; never overwrite** |
+| **Consumer's own** | `src/`, `tests/`, their `README.md`, their project-specific `CLAUDE.md` content | Auto never touches |
+
+## How consumers customize — *extend, don't edit*
+
+Framework files are effectively read-only to consumers. The updater overwrites
+them. Consumers customize by adding files in reserved namespaces:
+
+### Hooks — number-range convention (already supported by the dispatcher)
+
+The hook dispatchers already run **every** `*.sh` in their `.d/` directory in
+lexical order:
 
 ```bash
-git checkout -b issue/1
-# make changes, then:
-git commit -m "chore: initial project setup"
-# open a PR to merge into main
+# .githooks/pre-commit
+for hook in "$HOOK_DIR"/*.sh; do ... done
 ```
 
-See `CLAUDE.md` (shipped with the template) for the complete workflow guide.
+So we reserve ranges:
 
-## Known gotcha — GITHUB_TOKEN and CI
+- **`000`–`099` = Auto-owned.** The updater overwrites exactly these.
+- **`100`+ = consumer-owned.** The updater never touches them.
 
-The auto-sync workflow authenticates with `GITHUB_TOKEN` (the default GitHub
-Actions token). GitHub's security model intentionally prevents workflows
-triggered by `GITHUB_TOKEN` from kicking off further workflow runs — this is
-a recursion guard to prevent infinite loops.
+A consumer adds `pre-commit.d/100-my-lint.sh`; it runs after Auto's guards and
+survives every update. Zero conflict, because the updater only writes files it
+owns by name.
 
-**Accepted policy:** CI does **not** run on the sync PR itself. It runs when
-the consumer merges the sync PR to their `main` branch. This is the simpler
-model — it requires no consumer-side configuration and no additional secrets.
-Consumers should treat the sync PR as a diff-review step and rely on their
-branch-protection rules to enforce CI on the post-merge push to `main`.
+### Config values — `workflow.conf`
 
-**Safety net:** `.github/CODEOWNERS` requires that at least one human reviewer
-approves any PR touching `.github/` or `.githooks/`. This ensures a human has
-reviewed the framework diff before the merge triggers CI on `main`.
+Behavioral knobs (test command, source/test dirs, main branch) are *data*, not
+code. They live in `workflow.conf` (config bucket = never overwritten). If a
+consumer wants to edit a framework script just to change a value, that's a signal
+to promote the value into `workflow.conf`.
 
-**Opt-in alternative:** Consumers who want CI to run on the sync PR itself can
-store a Personal Access Token as an `AUTO_SYNC_TOKEN` repository secret and
-modify the workflow's checkout step to use it instead of `GITHUB_TOKEN`. A PAT
-is not subject to the recursion guard and will trigger normal workflow runs on
-the opened PR. This is an advanced option — the default `GITHUB_TOKEN`
-behaviour is recommended for most consumers.
+### Commands & agents — override-by-shadowing
+
+`.claude/commands/` and `.github/agents/` have no `.d/` loader. Same spirit
+applies: consumers add **new** files (`issue-mobile.md`) rather than editing
+shipped ones (`issue.md`). (Open question: do we need a `*.local.md` shadow that
+the updater skips? Start without it; add only if demand appears.)
+
+## Propagation mechanism — GitHub-native (chosen direction)
+
+**Scope: Auto is a _public_ template.** Propagation must therefore be
+**consumer-initiated** — we have no access to push into consumers' repos. The
+design uses GitHub platform features instead of a hand-rolled updater.
+
+### Layer A — first-party sync (files: hooks, commands, agents, docs)
+
+**No third-party marketplace Actions** (hard constraint). GitHub-*official*
+`actions/*` (e.g. `actions/checkout`) are permitted; PRs are opened with the
+pre-installed `gh` CLI (`gh pr create`), not a marketplace Action.
+
+Two first-party pieces, both owned by us:
+
+1. **`bin/auto-sync`** — a vendored shell script (shipped in the template, so
+   every consumer has it). Holds all the logic: fetch Auto at the latest release
+   tag, copy framework paths, honor the ignore list, skip config/consumer-owned
+   paths, stamp `.auto-version`. Runnable by hand anytime.
+2. **`.github/workflows/auto-sync.yml`** — a thin scheduled workflow (cron +
+   manual dispatch) that runs **in the consumer's repo**, calls `bin/auto-sync`,
+   and opens a PR with the diff via `gh`. The scheduler gives automatic
+   propagation discovery; the script keeps the logic in one place.
+
+The ownership model is enforced by our own **`.autosyncignore`** (gitignore
+syntax) — this *is* the contract, no separate manifest/checksum code:
+
+```
+# .autosyncignore — paths Auto sync must NEVER overwrite
+workflow.conf
+.claude/settings.json
+src/
+tests/
+.githooks/**/1[0-9][0-9]-*.sh   # consumer-owned 100+ hook scripts
+```
+
+Framework files sync; config, consumer code, and `1xx-` scripts are ignored.
+
+### Layer B — Reusable workflows (CI)
+
+The CI layer propagates *automatically* without file copying. A consumer's
+workflow is a thin shim that calls Auto's reusable workflow by version:
+
+```yaml
+jobs:
+  ci:
+    uses: Mpfk/auto/.github/workflows/test-suite.yml@v1
+```
+
+Consumers floating `@v1` receive new CI logic on every minor/patch release with
+no PR and no copied file. Only workflows support remote reference, so this layer
+is workflow-only; everything else goes through Layer A.
+
+### Retained / dropped
+
+Retained: **semver git tags** on Auto, a **`CHANGELOG.md`**, the
+**number-range convention** (enforced via `.autosyncignore`), and a
+`.auto-version` stamp so the sync can detect "behind." No `auto-manifest.yml`
+needed — the ignore file plus the script's path list cover it.
+
+### Known gotcha — GITHUB_TOKEN and CI on the sync PR
+
+PRs opened by the default `GITHUB_TOKEN` do **not** trigger other workflows
+(GitHub's recursion guard), so the consumer's CI may not run on the sync PR
+automatically. Options: (a) accept it — the consumer's merge re-runs CI on
+`main`; (b) document a PAT for consumers who want CI on the sync PR itself.
+Lean (a) for simplicity. Tracked in open questions.
+
+### Dogfooding note
+
+The sync workflow opens a PR directly, overlapping Auto's issue→PR→gate flow.
+Open question below: let the sync PR stand alone, or open an *issue* first so it
+rides the full `/auto` pipeline?
+
+## Consumer onboarding (creation flow)
+
+Creating a consumer repo is **unchanged** — still GitHub's **"New from template"**
+("Use this template"). The sync machinery ships inside the template, so a new repo
+has `bin/auto-sync`, `.github/workflows/auto-sync.yml`, `.autosyncignore`, and the
+`.auto-version` stamp from the moment it is created.
+
+> Note: the sync does **not** depend on GitHub's template-link metadata — the
+> upstream (`Mpfk/auto`) is configured in the script/workflow itself, so it also
+> works for repos copied or forked some other way.
+
+One-time setup after creation:
+
+1. **New from template** (as today).
+2. `git config core.hooksPath .githooks` — activate hooks (already required today;
+   not new).
+3. **Enable Actions to open PRs:** Settings → Actions → General → *"Allow GitHub
+   Actions to create and approve pull requests"* (off by default on new repos —
+   this is the only genuinely new step).
+4. *(Optional)* Run `auto-sync.yml` via **Run workflow** (manual dispatch) once to
+   pull the latest immediately, instead of waiting for the first scheduled run.
+
+Thereafter the scheduled workflow runs on its own and opens an update PR whenever
+Auto is ahead of the consumer's `.auto-version`.
+
+## Propagation flow (diagram)
+
+```mermaid
+flowchart LR
+    A[Update merged to Auto<br/>new release tag] --> B[Consumer's scheduled<br/>auto-sync workflow runs]
+    B --> C{Auto ahead of<br/>.auto-version?}
+    C -- no --> D[Do nothing]
+    C -- yes --> E[bin/auto-sync copies<br/>framework files<br/>honoring .autosyncignore]
+    E --> F[Open PR via gh CLI]
+    F --> G[Consumer reviews & merges]
+    G --> H[Consumer repo updated]
+```
+
+## Tradeoffs accepted
+
+- Consumers **cannot** alter the internals of core framework scripts — only add
+  around them or toggle via config. This is intentional: the value of Auto is a
+  *consistent* workflow across repos. Divergence in core behavior should be a
+  signal to change *Auto*, not the consumer's copy.
+
+## Security considerations
+
+The sync propagates **executable content** — git hooks (run on every local commit)
+and CI workflows (run with repo tokens). It is therefore a supply-chain channel and
+must be treated like one.
+
+| # | Risk | Severity | Mitigation |
+|---|------|----------|------------|
+| 1 | **Upstream compromise** of `Mpfk/auto` fans malicious code out to every consumer as a ready-to-merge PR (hooks + CI run it). | High | Branch protection + required review + **signed commits/tags** on Auto; sync only from **immutable, signed release tags** (never `main`/floating); 2FA + minimal maintainers. |
+| 2 | **CI-skip gotcha** — `GITHUB_TOKEN` PRs don't trigger consumer CI, so a human diff review is the only gate. | High | Require CI on sync PRs (opt-in PAT) and/or `CODEOWNERS` on `.github/` + `.githooks/`. |
+| 3 | **Self-modifying sync** — a sync PR can change `auto-sync.yml`'s own triggers/permissions. | Medium | Keep workflow `permissions:` minimal + explicit; highlight workflow-file changes in review. |
+| 4 | **Write-scope** — a path bug or bad `.autosyncignore` could clobber config or touch secrets. | Medium | Script writes an explicit **allow-list** of framework paths (default: don't touch); never reads/echoes secrets. |
+| 5 | **"Allow Actions to create PRs"** toggle expands the privilege surface. | Low | Scoped to consumer's own repo; document so consumers opt in knowingly. |
+| 6 | **Patch-adoption gap** — a security fix won't reach a consumer who ignores the sync PR. | Inverse risk | Reusable workflows for the CI layer auto-propagate fixes (trades against risk #1's moving-ref trust). |
+
+Net: security weight shifts onto **(a) protecting Auto as a now-critical upstream**
+and **(b) ensuring the sync PR is genuinely validated, not rubber-stamped.**
+
+## Prior art
+
+This design is not novel — it applies recognized patterns:
+
+- **Dependabot / Renovate** — scheduled job opens reviewed, CI-gated PRs proposing
+  updates. The sync workflow is the same pattern for a vendored framework.
+- **`copier` / `cruft`** (cookiecutter) — purpose-built tools for propagating
+  template updates to repos generated from a template. This is that niche.
+- Change flow (trunk dev → semver release → reviewed PR → CI gate → merge) is
+  standard code-review + CI-gated delivery.
+
+Known divergence from the ideal: **vendoring** (copying source into each repo) is
+generally inferior to **true dependency referencing** (a versioned package). See
+"Alternative considered" below — but a public template whose payload is git hooks,
+slash commands, and agent markdown *cannot* be referenced remotely (only workflows
+can), so vendoring + sync is correct **given the constraints**.
+
+## Open questions (brainstorm backlog)
+
+- [x] **Scope of consumer base:** _public template_ → consumer-initiated pull only.
+- [x] **Distribution model:** _first-party only_ — vendored `bin/auto-sync` +
+  scheduled `auto-sync.yml` (GitHub-official actions + `gh` CLI), reusable
+  workflows for CI (deferred). No third-party marketplace Actions.
+- [ ] **Sync-PR CI:** accept that `GITHUB_TOKEN` PRs skip CI (re-runs on merge),
+  or document an opt-in PAT for consumers who want CI on the sync PR?
+- [ ] **Sync PR vs issue:** let `actions-template-sync`'s PR stand alone, or have
+  it open an *issue* first so the update rides the full `/auto` gate pipeline?
+- [ ] **Reusable-workflow trust:** floating `@v1` means consumers run our
+  centrally-hosted CI logic. Acceptable for a public template, or pin to a SHA and
+  let template-sync bump it? (Security vs. auto-propagation tradeoff.)
+- [ ] **Versioning:** semver + git tags + `CHANGELOG.md`. How do breaking
+  framework changes (e.g. a hook contract change) get signaled — major bump +
+  `UPGRADING.md`?
+- [ ] **First-run / bootstrap:** does `git config core.hooksPath .githooks` and
+  label sync still need a one-time setup step, or can `repo-setup.yml` handle it
+  on template instantiation?
+- [ ] **`.claude/settings.json`** — pure config, or does some of it need to track
+  framework changes (e.g. new hook registrations)? May need splitting.
+- [ ] **Override-by-shadow for commands/agents** — needed, or is add-new enough?
+- [ ] **Partial updates / pinning** — can a consumer pin to an older Auto version
+  or skip a release?
+- [ ] **Migrations** — when a release needs more than file overwrite (e.g. rename
+  a label, move a file), where do migration steps live?
+
+## Alternative considered: package subscription
+
+Instead of vendoring files and syncing them, publish Auto as a **versioned package**
+(npm / GitHub Releases / container) that consumers **subscribe** to via a dependency
+declaration. Logic lives in the package; the consumer repo holds only thin shims
+(e.g. `.githooks/pre-commit` calls `auto-precommit` from the package) plus a pinned
+version + lockfile. Updates arrive as Dependabot version-bump PRs.
+
+The catch for Auto specifically: **slash commands and agent markdown must be real
+files Claude reads** — they can't be shimmed, so even a package model has to
+*materialize* those on install. And a package imposes an ecosystem (e.g. Node) on
+consumers, whereas Auto targets any language.
+
+### Vendored sync vs package subscription
+
+| Dimension | Vendored sync (chosen) | Package subscription |
+|-----------|------------------------|----------------------|
+| **Distribution** | Git tags on Auto; files copied in | Registry (npm / GHCR / Releases) |
+| **What's in consumer repo** | Full copies of all framework files | Thin shims + version pin + lockfile |
+| **Logic update** | Every change re-copies files (churn) | Version bump; little/no file churn |
+| **Versioning / pinning** | `.auto-version` stamp (home-grown) | First-class semver + lockfile |
+| **Update propagation** | Scheduled workflow → PR | Dependabot → PR |
+| **Rollback** | Revert the sync PR | Pin previous version |
+| **Hooks** | ✅ copied | ✅ shim → package |
+| **CI workflows** | ✅ copied (or reusable wf) | ✅ reusable wf / shim |
+| **Slash commands / agents** | ✅ copied | ⚠️ must still be materialized |
+| **Ecosystem requirement** | None (git + gh only) | Imposes Node/registry on consumers |
+| **Infra you maintain** | Sync script + workflow | Publish pipeline + registry + CLI |
+| **Supply-chain surface** | Git repo (tag signing) | Registry (package signing, deps) |
+| **Offline / air-gapped** | Works (git clone) | Needs registry access |
+| **Onboarding** | New-from-template + 1 toggle | New-from-template + install step |
+| **"New from template" fit** | Native — files already present | Needs post-create install/bootstrap |
+| **Patch adoption** | Manual (merge the PR) | Manual (merge the bump) — or float a range |
+| **Maturity of pattern** | `copier`/`cruft` | npm/Dependabot (very mature) |
+
+**Summary tradeoff:** the package model is the *cleaner dependency story* (real
+semver, less file churn, mature tooling) **but** imposes an ecosystem, needs publish
+infra, and *still* can't avoid materializing commands/agents — so it doesn't fully
+escape vendoring for Auto's payload. The vendored sync is *lower-infra and
+language-agnostic* but carries vendoring's drift and home-grown versioning. The
+decision hinges on: **are consumers willing to take a Node (or similar) dependency,
+and are you willing to run publish infra, in exchange for a cleaner version story?**
+
+## Implementation plan
+
+Sequenced by dependency. Each item is intended to become a GitHub Issue and run
+through the standard Auto workflow (TDD where code is involved).
+
+### Phase 0 — Foundations (in `auto`)
+- **0.1 Versioning & releases.** Adopt semver git tags, add `CHANGELOG.md`, define
+  the `.auto-version` stamp format. *(chore/docs)*
+- **0.2 Upstream hardening.** Branch protection on `main`, required review, **signed
+  commits + signed release tags**, minimal maintainers/2FA. Mitigates security #1.
+  *(chore)*
+- **0.3 Framework path allow-list.** A single canonical list of framework paths,
+  consumed by *both* the sync script and the mirror job (one source of truth).
+  *(feat/docs)*
+
+### Phase 1 — Ownership & conventions
+- **1.1 `.autosyncignore`.** Author the ignore file encoding config + consumer-owned
+  paths + `1xx` hook range. *(feat)*
+- **1.2 Hook number-range convention.** Document `000–099` = Auto, `100+` = consumer;
+  add guard/notes in the dispatchers. *(docs/refactor)*
+- **1.3 File-bucket audit.** Classify every current path; decide handling of the
+  `src/`/`tests/` scaffolding. *(docs)*
+
+### Phase 2 — Sync engine
+- **2.1 `bin/auto-sync`.** Fetch a signed release tag, **verify signature**, copy
+  allow-listed framework paths honoring `.autosyncignore`, stamp `.auto-version`,
+  leave changes uncommitted. Strict TDD. *(feat)*
+- **2.2 `auto-sync.yml`.** Scheduled + manual-dispatch workflow that runs the script
+  and opens a PR via `gh`; minimal `permissions:`; only `actions/checkout`. *(feat)*
+- **2.3 Sync-PR CI decision.** Accept `GITHUB_TOKEN` CI-skip (re-run on merge) or
+  document opt-in PAT; add `CODEOWNERS` for `.github/` + `.githooks/`. *(feat/docs)*
+
+### Phase 3 — Repository split
+- **3.1 Create `auto-template`.** New repo, clean starter contents only; mark as a
+  GitHub template repository. *(chore)*
+- **3.2 Template sync via auto-sync.yml.** `auto-template` runs its own `auto-sync.yml`
+  on a weekly schedule to pull framework updates from `Mpfk/auto` using `GITHUB_TOKEN` only.
+  No cross-repo PAT required. *(feat — completed, see issue #119)*
+- **3.3 De-template `auto`.** Remove the template flag from `auto`; strip
+  consumer-only assumptions; keep dev tooling. *(chore)*
+
+### Phase 4 — Onboarding & docs
+- **4.1 README onboarding** (both repos): new-from-template → hooks path → enable
+  "Allow Actions to create PRs" → optional manual sync. *(docs)*
+- **4.2 `UPGRADING.md`** for breaking framework changes. *(docs)*
+
+### Phase 5 — Validation & rollout
+- **5.1 End-to-end pilot.** Instantiate a throwaway consumer from `auto-template`,
+  run a full sync cycle, verify: PR opens, `workflow.conf` untouched, a `1xx-`
+  hook survives, `.auto-version` advances. *(test)*
+- **5.2 Friction pass.** File issues for any gaps found; iterate. *(chore)*
+
+**Critical path:** 0.1 → 0.3 → 1.1 → 2.1 → 2.2 → 3.1 → 3.2 → 5.1. Phases 1.2/1.3,
+0.2, and 4.x can run in parallel off the critical path.
+
+## Decision log
+
+- _2026-06-13_ — Chose **extend-don't-edit** over fork-and-merge. Rationale:
+  conflict-free overwrites; the hook dispatcher already supports additive `.d/`
+  extension. Number range `000–099` = Auto, `100+` = consumer.
+- _2026-06-13_ — Scope = **public template**; propagation is **consumer-initiated**.
+- _2026-06-13_ — **Third-party marketplace Actions ruled out** (non-starter).
+  GitHub-official `actions/*` permitted.
+- _2026-06-13_ — Chose **first-party sync**: vendored `bin/auto-sync` + scheduled
+  `auto-sync.yml` (opens PR via `gh` CLI) for files; **reusable workflows** for CI
+  (deferred). Dropped `auto-manifest.yml` and custom checksums; ownership enforced
+  by `.autosyncignore`.
+- _2026-06-13_ — **Confirmed vendored sync over package subscription.** Rationale:
+  Auto is a public, language-agnostic template; the package model imposes an
+  ecosystem (Node/registry) + publish infra and still must materialize
+  commands/agents, so its main benefit is half-defeated for Auto's payload.
+- _2026-06-13_ — **Two-repo topology:** `auto` (source/dev, not a template) +
+  `auto-template` (clean GitHub template). Consumers instantiate `auto-template`
+  and sync from `auto`'s signed release tags. Rationale: a template repo should
+  contain exactly the starter state; dev tooling must not leak into consumers.
+- _2026-06-13_ — Status moved to **Accepted**; implementation plan added.
