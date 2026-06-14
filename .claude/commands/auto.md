@@ -241,6 +241,29 @@ Implementation is active. Monitor CI and act on results.
 
    **If all checks are pending/queued:** Report: "CI is running for issue #{number}. Re-run `/auto {number}` when CI completes, or use `/loop 2m /auto {number}` to auto-poll." **STOP.**
 
+   **If zero checks are returned (empty list — GitHub Actions unavailable):** Enter CI fallback mode. This is a degraded path used only when Actions are unavailable (billing, quota, or outage) — prefer the normal GitHub Actions path when it is available.
+
+   > **⚠️ CI Fallback Mode** — GitHub Actions appear unavailable. Running CI steps locally.
+
+   a. Run the test suite from `workflow.conf`:
+      ```
+      source workflow.conf && eval "$TEST_CMD"
+      ```
+   b. Validate commit messages against Conventional Commits:
+      ```
+      PATTERN='^(feat|fix|test|refactor|docs|chore)(\(.+\))?: .+'
+      git log origin/main..HEAD --no-merges --pretty=format:'%s' | while IFS= read -r msg; do
+        echo "$msg" | grep -qE "$PATTERN" || { echo "FAIL: $msg"; exit 1; }
+      done
+      ```
+   c. **If any local check fails:** re-invoke a develop sub-agent with the failure output, then loop back to step (a).
+   d. **If all local checks pass:** post a fallback comment and advance the label:
+      ```
+      gh issue comment {number} --body "CI fallback: GitHub Actions appear unavailable. Ran test suite and commit validation locally — all passed. Advancing to status/review manually."
+      gh issue edit {number} --remove-label "status/in-progress" --add-label "status/review"
+      ```
+      Fall through to `status/review` handling below.
+
    **If any check is failing:**
    - Capture failure details:
      ```
@@ -284,6 +307,8 @@ CI is green. Run the Review Agent.
    gh issue edit {number} --remove-label "status/review" --add-label "status/in-progress"
    ```
    Loop back to the `status/in-progress` handler to fix.
+
+   **CI fallback exception:** If zero checks are returned (GitHub Actions still unavailable), verify a "CI fallback" comment exists on the issue. If found, skip this check — the local CI run in fallback mode already validated the branch. If no fallback comment exists, re-enter the `status/in-progress` handler so it runs CI fallback mode.
 
 2. **Get PR number:**
    ```

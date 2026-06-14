@@ -293,6 +293,45 @@ else
   fail "publish-template snapshot test failed (see output above)"
 fi
 
+# --- 15. CI fallback: agents handle GitHub Actions unavailability (#147) ---
+# When GitHub Actions are unavailable (billing, quota, outage), agents must
+# self-run CI steps locally and advance labels manually rather than stalling.
+AUTO_CMD="$ROOT/.claude/commands/auto.md"
+if [ ! -f "$AUTO_CMD" ]; then
+  fail ".claude/commands/auto.md missing"
+elif grep -qiE 'CI fallback|fallback.*CI|actions.*unavailable|unavailable.*actions|no checks.*returned|zero.*checks' "$AUTO_CMD"; then
+  pass ".claude/commands/auto.md documents CI fallback for unavailable GitHub Actions"
+else
+  fail ".claude/commands/auto.md must document CI fallback behavior when GitHub Actions are unavailable"
+fi
+
+AGENT_FLOW="$ROOT/docs/auto/agent-flow.md"
+if [ ! -f "$AGENT_FLOW" ]; then
+  fail "docs/auto/agent-flow.md missing"
+elif grep -qiE 'CI fallback|fallback.*CI|actions.*unavailable|self.run' "$AGENT_FLOW"; then
+  pass "docs/auto/agent-flow.md documents CI fallback"
+else
+  fail "docs/auto/agent-flow.md must document CI fallback for unavailable GitHub Actions"
+fi
+
+COPILOT_INST="$ROOT/.github/copilot-instructions.md"
+if [ ! -f "$COPILOT_INST" ]; then
+  fail ".github/copilot-instructions.md missing"
+elif grep -qiE 'CI fallback|fallback.*CI|actions.*unavailable|self.run.*CI' "$COPILOT_INST"; then
+  pass ".github/copilot-instructions.md documents CI fallback for unavailable GitHub Actions"
+else
+  fail ".github/copilot-instructions.md must document CI fallback behavior when GitHub Actions are unavailable"
+fi
+
+MERGE_AGENT="$ROOT/.github/agents/merge.agent.md"
+if [ ! -f "$MERGE_AGENT" ]; then
+  fail ".github/agents/merge.agent.md missing"
+elif grep -qiE 'CI fallback|fallback.*CI|actions.*unavailable|no.*checks.*exist' "$MERGE_AGENT"; then
+  pass ".github/agents/merge.agent.md handles CI fallback (no checks from unavailable Actions)"
+else
+  fail ".github/agents/merge.agent.md must handle the case when GitHub Actions are unavailable (no CI checks exist)"
+fi
+
 if [ "$FAILED" -ne 0 ]; then
   echo ""
   echo "Workflow config assertions FAILED."

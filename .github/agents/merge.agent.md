@@ -29,7 +29,9 @@ Given an issue number (or PR number), use `list_pull_requests` to find the open 
 ## Step 2: Verify Merge Prerequisites (hard gate — all four required)
 
 1. **Issue status is `status/review`** (or beyond) — `issue_read` (method `get`), check the `status/*` label.
-2. **CI is green** — `pull_request_read` (method `get_status`). Any non-`success` completed check, or any still-running check, is a stop.
+2. **CI is green or CI fallback confirmed** — `pull_request_read` (method `get_status`):
+   - If checks exist: any non-`success` completed check, or any still-running check, is a stop.
+   - If no checks exist at all (GitHub Actions unavailable): check for a "CI fallback" comment via `issue_read` (method `get_comments`). If a comment containing "CI fallback" is present, accept it as meeting the CI prerequisite — the agent self-ran tests locally. If no fallback comment exists, stop: "No CI checks and no CI fallback comment found. Re-invoke `/auto {number}` to run CI fallback mode."
 3. **Review PASS exists** — `issue_read` (method `get_comments`); the latest `## Review:` comment must be PASS.
 4. **PR is mergeable** — `pull_request_read` (method `get`), confirm `mergeable` is not `CONFLICTING`.
 
