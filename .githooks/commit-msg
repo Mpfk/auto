@@ -1,5 +1,6 @@
 #!/bin/bash
 # Dispatcher: runs all executable scripts in commit-msg.d/
+# Auto-owned scripts: 000-099. Consumer extensions: 100+. See docs/auto/hook-extension.md
 # Passes $1 (commit message file path) to each sub-hook.
 HOOK_DIR="$(cd "$(dirname "$0")" && pwd)/commit-msg.d"
 if [ -d "$HOOK_DIR" ]; then

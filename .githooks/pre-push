@@ -1,5 +1,6 @@
 #!/bin/bash
 # Dispatcher: runs all executable scripts in pre-push.d/
+# Auto-owned scripts: 000-099. Consumer extensions: 100+. See docs/auto/hook-extension.md
 HOOK_DIR="$(cd "$(dirname "$0")" && pwd)/pre-push.d"
 if [ -d "$HOOK_DIR" ]; then
   for hook in "$HOOK_DIR"/*.sh; do
