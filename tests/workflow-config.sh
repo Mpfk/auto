@@ -283,6 +283,15 @@ else
   pass "no $NEEDLE reference anywhere in the repo"
 fi
 
+# --- 14. bin/publish-template builds a correct consumer template snapshot (#143) ---
+echo ""
+echo "--- Running publish-template snapshot test ---"
+if bash "$ROOT/tests/test-publish-template.sh"; then
+  pass "publish-template builds a correct consumer-form snapshot"
+else
+  fail "publish-template snapshot test failed (see output above)"
+fi
+
 if [ "$FAILED" -ne 0 ]; then
   echo ""
   echo "Workflow config assertions FAILED."
