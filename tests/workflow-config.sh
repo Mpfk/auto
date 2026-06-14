@@ -121,6 +121,39 @@ else
   fi
 fi
 
+# --- 8. setup-hooks bootstrap: worktree/clone hook activation (#127) ---
+# Fresh worktrees inherit the shared .git/config, which previously held an
+# absolute core.hooksPath pointing at the empty .git/hooks. A committed,
+# idempotent bin/setup-hooks gives every worktree/clone a canonical activation
+# command that sets the RELATIVE path (.githooks) so hooks resolve per-worktree.
+SETUP_HOOKS="$ROOT/bin/setup-hooks"
+if [ ! -f "$SETUP_HOOKS" ]; then
+  fail "bin/setup-hooks missing (worktrees have no canonical hook activation)"
+else
+  pass "bin/setup-hooks exists"
+  if [ -x "$SETUP_HOOKS" ]; then
+    pass "bin/setup-hooks is executable"
+  else
+    fail "bin/setup-hooks must be executable"
+  fi
+  # Must set the RELATIVE path so it resolves correctly inside every worktree.
+  if grep -qE 'core\.hooksPath[[:space:]]+\.githooks' "$SETUP_HOOKS"; then
+    pass "bin/setup-hooks sets relative core.hooksPath .githooks"
+  else
+    fail "bin/setup-hooks must run: git config core.hooksPath .githooks"
+  fi
+fi
+
+# --- 9. CLAUDE.md documents worktree hook activation via bin/setup-hooks (#127) ---
+CLAUDEMD="$ROOT/CLAUDE.md"
+if [ ! -f "$CLAUDEMD" ]; then
+  fail "CLAUDE.md missing"
+elif grep -qF "bin/setup-hooks" "$CLAUDEMD"; then
+  pass "CLAUDE.md references bin/setup-hooks for worktree/clone activation"
+else
+  fail "CLAUDE.md must document bin/setup-hooks for worktree/clone hook activation"
+fi
+
 if [ "$FAILED" -ne 0 ]; then
   echo ""
   echo "Workflow config assertions FAILED."
