@@ -97,3 +97,27 @@ When a new consumer-owned path type is identified:
 2. Update the Consumer-owned bucket table in `docs/auto/file-buckets.md`.
 3. Ensure the path does **not** appear in `.auto-framework-paths`.
 4. Run both test scripts to confirm no overlap.
+
+## Known gotcha — GITHUB_TOKEN and CI
+
+The auto-sync workflow authenticates with `GITHUB_TOKEN` (the default GitHub
+Actions token). GitHub's security model intentionally prevents workflows
+triggered by `GITHUB_TOKEN` from kicking off further workflow runs — this is
+a recursion guard to prevent infinite loops.
+
+**Accepted policy:** CI does **not** run on the sync PR itself. It runs when
+the consumer merges the sync PR to their `main` branch. This is the simpler
+model — it requires no consumer-side configuration and no additional secrets.
+Consumers should treat the sync PR as a diff-review step and rely on their
+branch-protection rules to enforce CI on the post-merge push to `main`.
+
+**Safety net:** `.github/CODEOWNERS` requires that at least one human reviewer
+approves any PR touching `.github/` or `.githooks/`. This ensures a human has
+reviewed the framework diff before the merge triggers CI on `main`.
+
+**Opt-in alternative:** Consumers who want CI to run on the sync PR itself can
+store a Personal Access Token as an `AUTO_SYNC_TOKEN` repository secret and
+modify the workflow's checkout step to use it instead of `GITHUB_TOKEN`. A PAT
+is not subject to the recursion guard and will trigger normal workflow runs on
+the opened PR. This is an advanced option — the default `GITHUB_TOKEN`
+behaviour is recommended for most consumers.
