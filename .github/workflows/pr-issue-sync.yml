@@ -54,7 +54,7 @@ jobs:
             };
 
             if (["opened", "reopened", "synchronize"].includes(action)) {
-              await setStatus('status/in-progress');
+              await setStatus(pr.draft ? 'status/in-progress' : 'status/review');
               return;
             }
 
