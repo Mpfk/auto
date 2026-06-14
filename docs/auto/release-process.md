@@ -2,6 +2,18 @@
 
 This document describes how to cut a new release of Auto. Releases produce a semver tag that consumer repos use to detect when a framework update is available via `bin/auto-sync`.
 
+## Initial setup
+
+Before cutting the first release tag, a repo admin must configure the secret that the release mirror job uses to push framework files to `Mpfk/auto-template`:
+
+1. Go to **Settings → Secrets and variables → Actions** in the `Mpfk/auto` repository.
+2. Click **New repository secret**.
+3. Set **Name** to `MIRROR_TOKEN`.
+4. Set **Value** to a [fine-grained personal access token](https://github.com/settings/tokens?type=beta) scoped to the `Mpfk/auto-template` repository with **Contents: Read and write** permission.
+5. Save the secret.
+
+Without `MIRROR_TOKEN` the release mirror job (`.github/workflows/release-mirror.yml`) will fail with a 403 on push. This is a one-time setup; no further action is needed between releases.
+
 ## Version format
 
 Auto uses [Semantic Versioning](https://semver.org/spec/v2.0.0.html): `MAJOR.MINOR.PATCH`.
