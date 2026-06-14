@@ -1,0 +1,102 @@
+# Auto framework paths — overwrite on every sync update
+# Consumed by bin/auto-sync and the release mirror job
+#
+# Format: one path or glob per line, relative to the repo root.
+# Blank lines and lines starting with '#' are ignored.
+#
+# To add a new framework path when extending Auto:
+#   1. Append a line here (path or glob, relative to repo root).
+#   2. Update the Framework bucket table in docs/auto/file-buckets.md.
+#   3. Run tests/test-framework-paths.sh to confirm the path resolves.
+#
+# Entries annotated "# (added by issue/NNN)" are not yet present in this
+# repo but are reserved for future issues; the test skips them.
+# Remove the annotation once the file is created so the test validates it.
+
+# ---------------------------------------------------------------------------
+# Slash commands
+# ---------------------------------------------------------------------------
+.claude/commands/auto.md
+.claude/commands/develop.md
+.claude/commands/document.md
+.claude/commands/issue.md
+.claude/commands/merge.md
+.claude/commands/research.md
+.claude/commands/review.md
+
+# ---------------------------------------------------------------------------
+# Git hook dispatchers
+# ---------------------------------------------------------------------------
+.githooks/commit-msg
+.githooks/post-commit
+.githooks/pre-commit
+.githooks/pre-push
+
+# ---------------------------------------------------------------------------
+# Git hook rules (Auto-numbered 000-099)
+# ---------------------------------------------------------------------------
+.githooks/commit-msg.d/010-conventional-commits.sh
+.githooks/commit-msg.d/020-issue-linkage.sh
+.githooks/pre-commit.d/010-branch-guard.sh
+.githooks/pre-commit.d/020-doc-placement-guard.sh
+.githooks/pre-commit.d/030-tdd-cycle-guard.sh
+.githooks/pre-push.d/010-issue-status-consistency.sh
+.githooks/pre-push.d/020-test-suite-gate.sh
+
+# ---------------------------------------------------------------------------
+# Shared hook library
+# ---------------------------------------------------------------------------
+.githooks/lib/detect.sh
+
+# ---------------------------------------------------------------------------
+# Copilot agent definitions
+# ---------------------------------------------------------------------------
+.github/agents/develop.agent.md
+.github/agents/documentation.agent.md
+.github/agents/issue.agent.md
+.github/agents/merge.agent.md
+.github/agents/orchestrate.agent.md
+.github/agents/research.agent.md
+.github/agents/review.agent.md
+
+# ---------------------------------------------------------------------------
+# GitHub configuration — framework-owned
+# ---------------------------------------------------------------------------
+.github/copilot-instructions.md
+.github/hooks/doc-freshness.json
+.github/hooks/scripts/doc-freshness.sh
+.github/ISSUE_TEMPLATE/workflow-issue.yml
+.github/labels.yml
+.github/pull_request_template.md
+
+# ---------------------------------------------------------------------------
+# GitHub Actions workflows
+# ---------------------------------------------------------------------------
+.github/workflows/ci-issue-gate.yml
+.github/workflows/copilot-setup-steps.yml
+.github/workflows/issue-native-automation.yml
+.github/workflows/issue-state-guard.yml
+.github/workflows/labels-sync.yml
+.github/workflows/pr-checks.yml
+.github/workflows/pr-issue-sync.yml
+.github/workflows/repo-setup.yml
+
+# ---------------------------------------------------------------------------
+# Auto documentation (all files under docs/auto/)
+# ---------------------------------------------------------------------------
+docs/auto/agent-flow.md
+docs/auto/copilot-cloud-setup.md
+docs/auto/file-buckets.md
+docs/auto/github-access.md
+
+# ---------------------------------------------------------------------------
+# Framework versioning & release artefacts (future — see noted issues)
+# ---------------------------------------------------------------------------
+CHANGELOG.md    # (added by issue/85)
+.auto-version   # (added by issue/85)
+
+# ---------------------------------------------------------------------------
+# Sync tooling (future — see noted issues)
+# ---------------------------------------------------------------------------
+bin/auto-sync       # (added by issue/91)
+.autosyncignore     # (added by issue/88)
