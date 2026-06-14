@@ -2,11 +2,16 @@
 
 Auto is a structured software development workflow powered by specialized AI agents. Every piece of work is tracked as a GitHub Issue, developed on its own branch, implemented test-first, and documented before it reaches `main`.
 
-The **main conversation** (you + your AI assistant) coordinates the workflow. Agents are short-lived workers for specific phases — no single agent runs the entire lifecycle. You stay in control at two gates.
+The **main conversation** (you + your AI assistant) coordinates the workflow. Agents are short-lived workers for specific phases — no single agent runs the entire lifecycle. The two gates remain the control points, but how they are exercised depends on which command you run: `/auto` self-approves both and runs end-to-end, while the standalone `/issue` and `/merge` commands present the gates interactively.
 
 ## Execution Modes
 
-**Claude Code** — slash commands in Claude Code drive each phase. `/issue` creates the issue and plan; `/auto` drives the full workflow from the current state, pausing only at Gate 1 and Gate 2.
+**Claude Code** — slash commands drive each phase.
+- `/auto` is **fully autonomous**: from any starting state it chains research → plan → implement → review → **merge** without pausing, self-approving Gate 1 and Gate 2. It is the default way to drive an issue to `main`.
+- `/issue` is the interactive entry point: it creates the issue, researches, plans, and presents **Gate 1** through the Approve/Deny selection UI for a human to approve before implementation. It can also split a complex plan into **GitHub sub-issues** for parallel agent work.
+- `/merge` is the interactive merge command: it validates the merge prerequisites and presents **Gate 2** through the selection UI, then merges and verifies the merge landed.
+
+Run `/issue` then `/merge` when you want a human at each gate; run `/auto` when you want the whole thing driven autonomously.
 
 **Copilot chat-orchestrated** — the main conversation drives each phase via `@orchestrate` in VS Code.
 
@@ -62,48 +67,56 @@ flowchart TD
 |-------|------------|--------------|
 | 1. Init | Orchestrate | Creates GitHub Issue, checks for duplicates |
 | 2. Research | Research Agents (parallel) | Investigate codebase, docs, external sources, constraints |
-| 3. Synthesize + Plan | Orchestrate | Merges research, writes plan, presents Gate 1 |
-| 4. Gate 1 | Main conversation | You approve or revise the plan |
+| 3. Synthesize + Plan | Orchestrate / `/issue` | Merges research, writes plan, optionally splits into sub-issues, presents Gate 1 |
+| 4. Gate 1 | `/issue` (interactive) or `/auto` (self-approved) | Approve/revise the plan; `/auto` auto-approves |
 | 5. Implement | Develop + Documentation Agents (parallel) | Creates feature branch, Red-Green-Refactor, docs updated |
 | 6. Review | Review Agent | Validates TDD compliance, quality, tests |
-| 7. Gate 2 | Main conversation | You approve merge or reject with feedback |
-| 8. Merge | Main conversation | Merges branch, closes issue |
+| 7. Gate 2 | `/merge` (interactive) or `/auto` (self-approved) | Approve/deny the merge; `/auto` auto-approves once prerequisites hold |
+| 8. Merge | `/merge` or `/auto` | Merges branch, **verifies the merge landed**, closes issue |
 
 **Parallel rules:**
 - Research angles (codebase, docs, external, constraints) run in parallel.
 - Develop Agent(s) + Documentation Agent run in parallel during implementation.
 - Review is always sequential — implementation must be complete first.
+- **Sub-issues run in parallel:** when `/issue` splits a plan into file-disjoint sub-issues, `/auto` on the parent fans out one `/auto` sub-agent per child (each in its own worktree).
 
 **Multi-issue orchestration:** When the user grants broad autonomy across several issues at once, one `/auto` sub-agent is spawned per issue (each in its own worktree). Concurrency, post-merge verification, friction handling, and delegated gate authority are governed by the "Managing Autonomous Sub-agent Teams" section in `CLAUDE.md`.
 
 ## Approval Gates
 
+Gates are decision points, not always human pauses. **`/auto` self-approves both** and runs straight through — autonomy removes the human *pause*, never the *quality bar* (a gate's preconditions must still hold). The standalone **`/issue`** and **`/merge`** commands present the same gates interactively, in Claude Code via the **Approve/Deny/Other selection UI** (Copilot agents keep a plain-text prompt).
+
 ### Gate 1 — Plan Approval
 
 **When:** After research is complete and a plan has been drafted.
 
-**You see:** Synthesized research findings, open questions, the proposed plan, acceptance criteria.
+**You see:** Synthesized research findings, open questions, the proposed plan, acceptance criteria, and any proposed sub-issue decomposition.
 
-**Your options:**
-- **Approve** — agents begin implementation
-- **Revise** — request changes, answer open questions, adjust scope
+**Your options (interactive `/issue` only):**
+- **Approve** — set `status/ready`, create sub-issues if proposed, implementation can begin
+- **Revise** — request changes, answer open questions, adjust scope or the decomposition
+
+**Under `/auto`:** auto-approved once a plan and acceptance criteria exist.
 
 ### Gate 2 — Merge Approval
 
 **When:** After implementation is complete, tests pass, and the Review Agent has signed off.
 
-**Prerequisites — all three required:**
+**Prerequisites — all four required (enforced even under `/auto`):**
 1. Issue has `status/review` label
 2. Review Agent returned PASS
 3. CI checks are green on the PR
+4. The PR is mergeable (no conflicts with `main`)
 
-Only after all three are satisfied does the main conversation convert the PR from draft to ready-for-review and present Gate 2.
+Only after all four are satisfied is the PR converted from draft to ready-for-review and Gate 2 presented (or, under `/auto`, the merge performed).
 
 **You see:** Review Agent summary, retrospective, diff summary, proposed merge commit message.
 
-**Your options:**
-- **Approve** — branch merges to `main`, issue closes with `status/done`
-- **Reject** — a `## Retrospective — Iteration N` comment is posted, label resets to `status/researching`, workflow loops back to research
+**Your options (interactive `/merge` only):**
+- **Approve** — branch merges to `main`, the merge is verified, issue closes with `status/done`
+- **Deny** (or Other + feedback) — a `## Retrospective — Iteration N` comment is posted, label resets to `status/researching`, workflow loops back to research
+
+**Under `/auto`:** auto-approved once all four prerequisites hold; `/auto` then merges and verifies success without pausing.
 
 ```mermaid
 flowchart LR
@@ -198,8 +211,9 @@ Branches follow the naming convention `issue/{issue-number}` (e.g. `issue/42`).
 
 | Command | Purpose | Equivalent Copilot agent |
 |---------|---------|--------------------------|
-| `/issue` | Create issue, parallel research, plan, Gate 1 | `@orchestrate` / `@issue` |
-| `/auto` | Auto-drive full workflow from current state; pauses at Gate 1 and Gate 2 | *(new — no Copilot equivalent)* |
+| `/issue` | Create issue, parallel research, plan, optional sub-issue split, Gate 1 (selection UI) | `@orchestrate` / `@issue` |
+| `/auto` | Auto-drive full workflow from current state to merge; fully autonomous (self-approves both gates) | *(new — no Copilot equivalent)* |
+| `/merge` | Validate prerequisites, present Gate 2 (selection UI), merge, verify success | `@merge` |
 | `/develop` | One Red-Green-Refactor cycle with retrospective | `@develop` |
 | `/document` | Maintain `docs/` | `@documentation` |
 | `/review` | Pre-merge validation | `@review` |
@@ -207,7 +221,7 @@ Branches follow the naming convention `issue/{issue-number}` (e.g. `issue/42`).
 
 **Config:** `.claude/commands/` | Requires Claude Code
 
-The `/auto` command is unique to Claude Code: it reads the current `status/*` label on a given issue and drives all appropriate phases automatically — spawning research, develop, document, and review sub-agents as needed — looping back on Gate 2 rejection. `gh` CLI is available in Claude Code (unlike Copilot cloud), so commands use it directly without MCP configuration.
+The `/auto` command is unique to Claude Code: it reads the current `status/*` label on a given issue and drives all appropriate phases automatically — spawning research, develop, document, and review sub-agents as needed, then merging — **fully autonomously, without pausing at either gate**. When the issue is a parent with sub-issues, it fans out one `/auto` sub-agent per child. Human-in-the-loop gate review is available through the standalone `/issue` (Gate 1) and `/merge` (Gate 2) commands, which use the Approve/Deny selection UI. `gh` CLI is available in Claude Code (unlike Copilot cloud), so commands use it directly without MCP configuration.
 
 ---
 
@@ -299,6 +313,20 @@ Pre-merge quality gate. Read-only (~15–20 tool calls). Invoked only after CI i
 
 **Config:** `.github/agents/review.agent.md` | Model: Claude Opus 4 | Cannot modify files.
 
+### Merge Agent
+
+Takes a reviewed, CI-green PR through Gate 2 and merges it to `main`, then verifies the merge actually landed.
+
+**Prerequisites (hard gate):** `status/review`, Review PASS, CI green, mergeable PR.
+
+**Interactive (`/merge`):** presents Gate 2 via the Approve/Deny selection UI. On Approve → merge + verify; on Deny/feedback → post retrospective and reset to `status/researching`.
+
+**Autonomous (invoked by `/auto`):** self-approves and merges without prompting.
+
+**Verification:** confirms PR `state == MERGED`, the issue is closed at `status/done`, and `main` advanced — never assumes success from the merge call alone.
+
+**Config:** `.claude/commands/merge.md` (Claude Code), `.github/agents/merge.agent.md` (Copilot)
+
 ## Configuration
 
 ### `workflow.conf`
@@ -318,8 +346,21 @@ A Copilot PostToolUse hook. After file edits, reminds the agent to check whether
 
 ### `.github/workflows/`
 
-- **`conventional-commits.yml`** — Validates PR commit messages on every PR.
-- **`test-suite.yml`** — Runs full test suite (from `workflow.conf`) on every PR.
+- **`pr-checks.yml`** (display name **PR Checks**) — Runs three parallel jobs on every PR: `test` (full test suite from `workflow.conf`), `check-commits` (Conventional Commits validation), and `policy` (workflow policy checks). Replaces the former `test-suite.yml`, `conventional-commits.yml`, and `workflow-policy.yml`, which were merged to reduce CI run fan-out. Job ids are preserved so existing branch-protection required checks keep matching.
+- **`ci-issue-gate.yml`** — Triggers on `workflow_run` completion of **PR Checks**; advances the issue past the CI gate. Fires once per PR push (previously once per separate workflow).
+- **`issue-state-guard.yml`** — Self-heals issue status labels. Has a `concurrency` group keyed on the issue number with `cancel-in-progress: true`, so an unlabel+label transition pair collapses to one effective run.
+- **`issue-native-automation.yml`** — Handles GitHub-native issue automation, including `/auto ` slash-command comments.
+- **`pr-issue-sync.yml`** — Keeps PR and linked issue state in sync.
+- **`repo-setup.yml`** — One-time repository bootstrap (labels, settings).
+- **`labels-sync.yml`** — Syncs the canonical label set to the repo.
+- **`copilot-setup-steps.yml`** — Setup steps for the GitHub Copilot coding agent.
+
+#### CI fan-out / cost notes
+
+- **Merged PR Checks workflow.** Collapsing the three former per-PR workflows into one workflow with three parallel jobs reduces the number of GitHub Actions runs (and the `workflow_run` events that `ci-issue-gate.yml` reacts to) without losing any individual check.
+- **Status-guard concurrency.** A status transition removes one label and adds another, firing two `issue-state-guard.yml` runs in quick succession. The `concurrency` group (keyed on issue number, `cancel-in-progress: true`) collapses these to a single effective run. A manual sole-label removal still triggers an `unlabeled` run, so the guard continues to self-heal a stripped issue back to `status/draft`.
+- **Comment-job prefix guard.** The `comment-commands` job in `issue-native-automation.yml` runs only when the comment body starts with `/auto `, so ordinary comments (develop retrospectives, bot status updates) skip the job and consume no compute.
+- **Branch-protection caveat.** Required status checks are configured manually because the workflow token lacks the scope to set them. The merged workflow preserves the job ids `test`, `check-commits`, and `policy`, so branch protection that references those job names keeps working unchanged. Anyone whose branch protection referenced the old *workflow* names ("Test Suite", "Conventional Commits Check", "Workflow Policy") rather than the job ids must update their required checks to the **PR Checks** workflow / those job names.
 
 ## Git Hooks
 

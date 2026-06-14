@@ -102,10 +102,10 @@ When the Review Agent returns PASS and CI is confirmed green: convert the PR fro
 2. Review Agent returned **PASS**.
 3. CI checks are **green** on the PR.
 
-Once all three are confirmed, the PR has been converted from draft to ready-for-review. Present the review summary, retrospective, diff, and proposed merge commit. On rejection: post a `## Retrospective — Iteration N` comment to the issue (where N = count of existing `## Retrospective — Iteration` comments + 1), update label to `status/researching`, go to Phase 2.
+Once all three are confirmed, the PR has been converted from draft to ready-for-review. Present the review summary, retrospective, diff, and proposed merge commit, then prompt for approval (plain text — Copilot has no selection UI). On rejection: post a `## Retrospective — Iteration N` comment to the issue (where N = count of existing `## Retrospective — Iteration` comments + 1), update label to `status/researching`, go to Phase 2.
 
 ### Phase 7: Merge
-Merge the branch with a Conventional Commits message. Update issue label to `status/done` and close the issue.
+Invoke the **merge** agent (or merge directly): merge the branch with a Conventional Commits message, then **verify the merge landed** — confirm PR `state == MERGED`, the issue is closed at `status/done`, and set them manually if the `pr-issue-sync` automation has not fired. Never assume the merge succeeded from the merge call alone.
 
 ## Spawning Agents
 
@@ -137,16 +137,17 @@ If a task requires multiple components, invoke **multiple develop agents** rathe
 
 ## Agents
 
-Six specialist agents in `.github/agents/`:
+Seven specialist agents in `.github/agents/`:
 
 | Agent | Purpose | Invoked by |
 |-------|---------|------------|
-| `issue` | GitHub-native intake and planning. Runs duplicate checks, research fan-out, and writes plan + acceptance criteria for Gate 1. | Main conversation or GitHub Agent |
-| `orchestrate` | Creates GitHub Issues, runs research, synthesizes findings, writes plans. Handles init through Gate 1. | Main conversation |
+| `issue` | GitHub-native intake and planning. Runs duplicate checks, research fan-out, and writes plan + acceptance criteria for Gate 1. Splits into sub-issues when work divides cleanly. | Main conversation or GitHub Agent |
+| `orchestrate` | Creates GitHub Issues, runs research, synthesizes findings, writes plans. Handles init through Gate 1. Splits into sub-issues when work divides cleanly. | Main conversation |
 | `research` | Investigates one angle of a problem (codebase, docs, external, constraints). Multiple run in parallel. | Orchestrate agent or main conversation |
 | `develop` | Implements one component via Red-Green-Refactor. | Main conversation |
 | `documentation` | Maintains `docs/` directory. Creates/updates docs, ADRs, README. | Main conversation |
 | `review` | Pre-merge validation. Checks TDD compliance, code quality, docs, tests. Read-only. | Main conversation |
+| `merge` | Gate 2 + merge. Validates prerequisites, merges with a Conventional Commits message, and verifies the merge landed. | Main conversation |
 
 ## Configuration
 

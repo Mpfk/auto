@@ -8,8 +8,9 @@ A project template that structures development using specialized AI agents, test
 1. Clone this template into your new project
 2. Activate git hooks (run once): `git config core.hooksPath .githooks`
 3. Open Claude Code and start working:
-   - `/issue Add a contact form` — research, plan, Gate 1
-   - `/auto` — drive the full workflow from the current issue state
+   - `/auto Add a contact form` — fully autonomous: research → plan → implement → review → merge
+   - `/issue Add a contact form` — research, plan, and approve Gate 1 yourself (selection UI)
+   - `/merge` — approve Gate 2 yourself and merge the current issue's PR (selection UI)
 
 ### GitHub Copilot
 1. Clone this template into your new project
@@ -20,7 +21,7 @@ A project template that structures development using specialized AI agents, test
 
 ## How It Works
 
-You describe what you need. Agents handle research, planning, implementation, and review. You approve the plan and the merge — everything else is automated.
+You describe what you need. Agents handle research, planning, implementation, review, and merge. Run `/auto` to have the whole flow driven autonomously to `main`, or use `/issue` and `/merge` to put a human at each gate (Approve/Deny selection UI in Claude Code).
 
 ```mermaid
 flowchart TD
@@ -43,7 +44,7 @@ flowchart TD
     style M fill:#2ecc71,color:#fff,stroke:#27ae60
 ```
 
-Every piece of work is tracked as a GitHub Issue, developed on its own `issue/{number}` branch, implemented test-first, and documented before reaching `main`. You stay in control at two gates: the plan and the merge.
+Every piece of work is tracked as a GitHub Issue, developed on its own `issue/{number}` branch, implemented test-first, and documented before reaching `main`. The two gates — the plan and the merge — are the control points: `/auto` self-approves them for hands-off delivery, while `/issue` and `/merge` stop for you.
 
 ## Setup
 
@@ -56,7 +57,7 @@ Every piece of work is tracked as a GitHub Issue, developed on its own `issue/{n
 **Steps:**
 1. Activate git hooks (run once after cloning): `git config core.hooksPath .githooks`
 2. Open Claude Code in the repo directory
-3. Use `/issue` to start new work or `/auto` to drive an existing issue forward
+3. Use `/auto` to drive an issue autonomously to merge, or `/issue` + `/merge` to approve each gate yourself
 
 No additional MCP configuration is needed — `gh` CLI and GitHub MCP tools work out of the box.
 
@@ -106,8 +107,9 @@ Drive the workflow entirely from GitHub — no local IDE required.
 
 | Command | Purpose |
 |---------|---------|
-| `/issue` | Create issue, run parallel research, write plan, present Gate 1 |
-| `/auto` | **Auto-drive the full workflow** from the current issue state — pauses only at Gate 1 and Gate 2 |
+| `/issue` | Create issue, run parallel research, write plan, optionally split into sub-issues, present Gate 1 (selection UI) |
+| `/auto` | **Auto-drive the full workflow to merge** — fully autonomous, self-approves both gates, fans out per sub-issue |
+| `/merge` | Validate prerequisites, present Gate 2 (selection UI), merge, and verify success |
 | `/develop` | Implement one component via Red-Green-Refactor |
 | `/document` | Maintain `docs/` |
 | `/review` | Pre-merge validation |
@@ -122,6 +124,7 @@ Drive the workflow entirely from GitHub — no local IDE required.
 | `@develop` | Implements one component via Red-Green-Refactor |
 | `@documentation` | Maintains `docs/` |
 | `@review` | Pre-merge validation (read-only) |
+| `@merge` | Gate 2 + merge: validate prerequisites, merge, verify success |
 
 ## Project Structure
 

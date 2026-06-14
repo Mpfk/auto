@@ -31,7 +31,7 @@ jobs:
             // This handles the Copilot SWE agent which always creates copilot/... branches.
             let issue_number;
             const branchMatch = /^issue\/(\d+)$/.exec(branch);
-            // Keep this pattern aligned with .github/workflows/workflow-policy.yml.
+            // Keep this pattern aligned with the policy job in .github/workflows/pr-checks.yml.
             const closingReferenceRegex = /\b(?:close[sd]?|fix(?:e[sd])?|resolve[sd]?)\s*:?\s+(?:[A-Za-z0-9_.-]+\/[A-Za-z0-9_.-]+)?#(\d+)\b/i;
             if (branchMatch) {
               issue_number = Number(branchMatch[1]);

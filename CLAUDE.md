@@ -1,6 +1,6 @@
 # Auto — Claude Code Workflow Guide
 
-This repository uses the **Auto** multi-agent workflow. All work flows through GitHub Issues with two human approval gates. See `docs/auto/agent-flow.md` for the full specification.
+This repository uses the **Auto** multi-agent workflow. All work flows through GitHub Issues with two approval gates. Those gates are human-driven in the standalone `/issue` and `/merge` commands and self-approved by the fully autonomous `/auto` command. See `docs/auto/agent-flow.md` for the full specification.
 
 GitHub access depends on the environment: in **local** Claude Code sessions the `gh` CLI is available and is the primary tool; in **cloud/remote** sessions (claude.ai/code, mobile, GitHub Actions) `gh` is not installed and all GitHub operations go through the `mcp__github__*` MCP tools instead. Every Auto command starts with a Step 0 detection check and maps `gh` invocations to MCP equivalents per `docs/auto/github-access.md`. Both modes are first-class — never treat a missing `gh` CLI as a blocker.
 
@@ -12,7 +12,7 @@ GitHub access depends on the environment: in **local** Claude Code sessions the 
 4. **Strict TDD.** Red-Green-Refactor. Tests written before implementation. No exceptions.
 5. **Conventional Commits.** `type(scope): description`. Types: `feat`, `fix`, `test`, `refactor`, `docs`, `chore`. The commit-msg hook enforces this.
 6. **Docs in `docs/` only.** Permitted root-level files: `README.md` and `CLAUDE.md`. No other `.md` files in `src/`, project root, or elsewhere. `.claude/` command files are also allowed.
-7. **Gate compliance.** Gate 1 (plan approval) and Gate 2 (merge approval) require human confirmation. Never auto-approve or skip them.
+7. **Gate integrity.** Gate 1 (plan) and Gate 2 (merge) are decision points with hard preconditions that must always hold — Gate 1 needs a synthesized plan + acceptance criteria; Gate 2 needs `status/review`, a Review PASS, CI green, and a mergeable PR. Who approves depends on the command: the standalone `/issue` and `/merge` commands present the gates for **human confirmation** via the Approve/Deny selection UI, while `/auto` runs **fully autonomously and self-approves both** (it never waits for input). Autonomy removes the human pause, never the preconditions — never merge with a gate's preconditions unmet.
 
 ## Workflow Status Flow
 
@@ -20,14 +20,15 @@ GitHub access depends on the environment: in **local** Claude Code sessions the 
 status/draft → status/researching → status/planning → [Gate 1] → status/ready → status/in-progress → [CI gate] → status/review → [Gate 2] → status/done
 ```
 
-Gate 1 and Gate 2 require your explicit approval. Everything between them is automated.
+Everything between the gates is automated. `/auto` also self-approves both gates and drives the flow end-to-end without pausing; the standalone `/issue` (Gate 1) and `/merge` (Gate 2) commands stop for your explicit approval via the selection UI.
 
 ## Slash Commands
 
 | Command | What it does |
 |---------|-------------|
-| `/issue [description or issue#]` | Create issue, run parallel research, write plan, present Gate 1 |
-| `/auto [issue_number]` | **Auto-drive the full workflow.** Reads current state, chains all phases. Pauses only at Gate 1 and Gate 2 |
+| `/issue [description or issue#]` | Create issue, run parallel research, write plan, optionally split into sub-issues, present Gate 1 (selection UI) |
+| `/auto [issue_number]` | **Auto-drive the full workflow to merge.** Reads current state, chains all phases, self-approves both gates. Fully autonomous — never pauses. Fans out per sub-issue |
+| `/merge [issue#/PR#]` | Validate merge prerequisites, present Gate 2 (selection UI), merge, and verify the merge landed |
 | `/develop <issue> <branch> <task> <criteria>` | One Red-Green-Refactor cycle with retrospective |
 | `/review <issue> <branch> <criteria>` | Pre-merge validation: TDD compliance, quality, tests, docs |
 | `/document <issue> <branch> <changes> <files>` | Update `docs/` for completed work |
@@ -35,19 +36,26 @@ Gate 1 and Gate 2 require your explicit approval. Everything between them is aut
 
 ### Typical Full Workflow
 
+**Hands-off (fully autonomous):**
 ```
-# Step 1: Create issue, research, plan — presents Gate 1
-/issue "add user authentication with email/password"
-# → Review the research, plan, and acceptance criteria.
-# → Reply "approve" to continue, or give feedback to revise.
+/auto "add user authentication with email/password"
+# → Creates the issue, researches, plans, implements, reviews, and merges —
+#   self-approving both gates. Monitor CI with /loop 2m /auto <issue#> if it pauses on a running CI run.
+```
 
-# Step 2: Drive implementation all the way to Gate 2
+**Human at each gate:**
+```
+# Step 1: Create issue, research, plan — presents Gate 1 via the selection UI
+/issue "add user authentication with email/password"
+# → Review the research, plan, and any proposed sub-issues. Press Approve, or pick Other to give feedback.
+
+# Step 2: Drive implementation up to review
 /auto 42
-# → Implements via develop + document agents in parallel
-# → Monitors CI; re-invokes develop on failure
-# → Runs /review when CI green
-# → Pauses at Gate 2 with review summary and diff
-# → Reply "approve" to merge.
+# → Implements via develop + document agents, monitors CI, runs /review when CI is green.
+
+# Step 3: Approve and merge — presents Gate 2 via the selection UI
+/merge 42
+# → Verifies prerequisites, then press Approve to merge (or Other to send it back with feedback).
 ```
 
 ### Resuming an In-Flight Issue

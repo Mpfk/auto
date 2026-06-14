@@ -155,32 +155,51 @@ If status is `status/draft`, `status/researching`, or `status/planning`, proceed
    "
    ```
 
-5. **Present Gate 1.** Display to the user:
+5. **Consider sub-issues for parallel work.** Evaluate whether the plan splits cleanly into independent units that teams of agents could implement in parallel.
+
+   **Create sub-issues only when the plan has 2+ genuinely independent, file-disjoint tasks** — tasks that touch different files/modules and have no ordering dependency between them. Do NOT decompose simple issues, tightly-coupled work, or tasks that share the same files; those stay as a single issue with a numbered plan.
+
+   When the work qualifies, after Gate 1 approval (step 6) the parent issue becomes a tracking issue and each independent task becomes a child sub-issue:
+   - For each independent task, create a child issue with its own focused Problem Statement, the task description, and the subset of acceptance criteria it owns. Label it with the same type label and `status/ready`.
+   - Link each child to the parent as a GitHub sub-issue (detect the repo first: `REPO=$(git remote get-url origin | sed -E 's#.*[:/]([^/]+/[^/]+?)(\.git)?$#\1#')`):
+     ```
+     CHILD_ID=$(gh api repos/$REPO/issues/{child_number} --jq '.id')   # numeric DB id, not the issue number
+     gh api repos/$REPO/issues/{parent_number}/sub_issues --method POST -F sub_issue_id=$CHILD_ID
+     ```
+     In **MCP mode** (no sub-issue endpoint on the GitHub MCP server), instead add a checklist of child references to the parent body (`- [ ] #{child_number} — {task}`) and a `Parent: #{parent_number}` line in each child body. See `docs/auto/github-access.md`.
+   - Keep the parent's body Plan section as the integration overview; the children carry the implementable tasks.
+
+   Present the proposed decomposition (parent + the child tasks) as part of the Gate 1 material below so the user approves the split, not just the plan. If the work does not qualify, skip sub-issues and proceed as a single issue.
+
+6. **Present Gate 1 via the selection UI.** Display the decision material to the user:
    - Summary of synthesized research (key findings, constraints, open questions)
-   - Proposed plan (numbered tasks)
+   - Proposed plan (numbered tasks) — and the proposed sub-issue decomposition if any
    - Acceptance criteria
    - Any remaining open questions
 
-   Use this exact wording:
-   > **Gate 1: Approve this plan to move issue #{number} to `status/ready`?**
-   > Reply "approve" to proceed with implementation, or provide feedback to revise.
+   Then call the **AskUserQuestion** tool to collect the decision (instead of asking the user to type "approve"):
+   - Question: `Approve this plan to move issue #{number} to status/ready?`
+   - Header: `Gate 1`
+   - Options:
+     1. **Approve** — "Set `status/ready` (and create the sub-issues, if proposed) so implementation can begin."
+     2. **Revise** — "Hold at `status/planning`; I'll provide feedback to adjust the research, plan, or decomposition."
 
-   **STOP and wait for user response.**
+   The user can always pick **Other** to supply free-text feedback — treat any free-text response as a revision request with that feedback. **Do not proceed until the user selects Approve.**
 
-6. **On approval:**
+7. **On approval:**
    ```
    gh issue edit {number} --remove-label "status/planning" --add-label "status/ready"
    ```
-   GitHub Actions (`issue-native-automation.yml`) will automatically create branch `issue/{number}` from `main`.
+   Then create any sub-issues from step 5. GitHub Actions (`issue-native-automation.yml`) will automatically create branch `issue/{number}` from `main` for each `status/ready` issue.
 
    Return to the user:
-   - Issue number: `#{number}`
+   - Issue number: `#{number}` (and child sub-issue numbers, if created)
    - Branch: `issue/{number}` (being created by automation — wait a moment then verify with `gh api repos/{owner}/{repo}/git/refs/heads/issue/{number}`)
    - Plan summary
    - Acceptance criteria
-   - Next step: run `/auto {number}` to begin implementation
+   - Next step: run `/auto {number}` to drive the full workflow autonomously to merge (it fans out one agent per sub-issue when the parent was decomposed)
 
-7. **On revision request:** Incorporate the user's feedback into the research synthesis and plan. Update the issue body. Re-present Gate 1 with the revised plan.
+8. **On revision request:** Incorporate the user's feedback into the research synthesis, plan, and decomposition. Update the issue body. Re-present Gate 1 with the revised plan.
 
 ---
 
