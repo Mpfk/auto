@@ -137,6 +137,8 @@ After the tag is pushed, confirm:
 3. `CHANGELOG.md` has the new version section with today's date and a non-empty entry.
 4. *(Optional)* Manually trigger `auto-sync.yml` in `auto-template` via Actions → Run workflow to pull the new release immediately rather than waiting for the next weekly schedule.
 
+   > **Caveat:** manual dispatch may return `HTTP 422: Workflow does not have 'workflow_dispatch' trigger` even though the workflow file declares `workflow_dispatch`. This is a GitHub registration quirk — the dispatch trigger is not enabled until the workflow re-registers on `auto-template`'s default branch (which happens automatically the next time a sync PR touches the workflow). No action is required: the **weekly cron is the reliable fallback**, so `auto-template` self-updates within a week regardless.
+
 ## Breaking changes
 
 When a release contains breaking changes (renamed files, changed hook contracts, renamed labels, altered CI workflow inputs, or a changed `.auto-version` format), it requires a **MAJOR** version bump. Before tagging:
