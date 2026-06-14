@@ -156,6 +156,29 @@ logic on their next pull request — automatically, using only the default
 > consumers stay on the last `1.x` release until they deliberately change their
 > `uses:` ref to `@v2`. See [Breaking changes](#breaking-changes).
 
+### 7. Refresh the template snapshot
+
+CI updates reach consumers automatically via `@v1` (step 6). The **instruction
+files** in `Mpfk/auto-template` — slash commands, agent definitions, `CLAUDE.md`,
+hooks, and docs — are a one-time snapshot, so refresh them whenever they changed
+this release. From a clean `main` checkout:
+
+```bash
+# Preview what would ship (writes the consumer-form tree for inspection):
+bin/publish-template --out /tmp/template-preview
+
+# Build and push the snapshot to Mpfk/auto-template:
+bin/publish-template --push
+```
+
+`publish-template` rebuilds the consumer form (rewrites `pr-checks.yml` to the
+`@v1` caller, drops the hosted reusable workflow and dev-only files, adds the
+`src/`/`tests/` placeholders) and pushes with **your** git credentials. It is a
+local maintainer tool by design — not a CI workflow — because `GITHUB_TOKEN`
+cannot push across repos or modify `.github/workflows/**`, so a CI version would
+require a PAT or a cron. If the template is already current it reports "nothing
+to push" and exits cleanly. Skip this step if only CI logic changed.
+
 ## Verification
 
 After the tags are pushed, confirm:

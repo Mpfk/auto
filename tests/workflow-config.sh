@@ -269,18 +269,19 @@ done
 # --- 13. No AUTO_SYNC_TOKEN reference survives anywhere (#141) ---
 # No token setup is the whole point — a consumer must never wire up a PAT.
 # Build the needle by concatenation so this assertion does not match itself.
+# Scope to git-tracked files (git grep) so stray local git worktrees under
+# .claude/worktrees/ and other untracked/ignored paths can't trip the check —
+# the contract is about what the repo SHIPS, not local scratch checkouts.
 NEEDLE="AUTO_SYNC""_TOKEN"
-HITS="$(grep -rIl "$NEEDLE" "$ROOT" \
-    --exclude-dir=.git \
-    --exclude-dir=node_modules \
-    --exclude="workflow-config.sh" \
-    --exclude="CHANGELOG.md" 2>/dev/null | sed "s#$ROOT/##" | tr '\n' ' ')"
+HITS="$(git -C "$ROOT" grep -Il "$NEEDLE" -- \
+    ':(exclude)tests/workflow-config.sh' \
+    ':(exclude)CHANGELOG.md' 2>/dev/null | tr '\n' ' ')"
 # CHANGELOG.md is an append-only historical record; it documents the token's
 # removal (and its prior existence) and is intentionally exempt.
 if [ -n "$HITS" ]; then
   fail "$NEEDLE still referenced outside the changelog (no live token setup may remain): $HITS"
 else
-  pass "no $NEEDLE reference anywhere in the repo"
+  pass "no $NEEDLE reference in tracked files"
 fi
 
 # --- 14. bin/publish-template builds a correct consumer template snapshot (#143) ---

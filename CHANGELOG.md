@@ -7,6 +7,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Added
+
+- `bin/publish-template` — local maintainer tool that builds the consumer-form template snapshot (rewrites `pr-checks.yml` to the `@v1` caller, drops the hosted reusable workflow and dev-only files, adds `src/`/`tests/` placeholders) and pushes it to `Mpfk/auto-template`. Documented as release step 7. Deliberately not a CI workflow — that would require a PAT or cron.
+
 ## [0.3.0] - 2026-06-14
 
 Native-GitHub-only distribution. Auto is now adopted with one click ("Use this
