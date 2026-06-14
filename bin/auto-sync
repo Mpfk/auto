@@ -96,7 +96,7 @@ if [[ -z "$TAG" ]]; then
     | tail -1) || true
 
   if [[ -z "$latest" ]]; then
-    die "Could not determine latest release tag from upstream: $UPSTREAM_REPO"
+    die "No v* tags found on upstream repo ($UPSTREAM_REPO). Create a release tag first (e.g. git tag -s v0.1.0 -m 'Release v0.1.0' && git push origin v0.1.0)."
   fi
   TAG="$latest"
   log "Latest upstream tag: $TAG"
