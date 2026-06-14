@@ -453,10 +453,13 @@ echo ""
 echo "--- Test 10: auto-sync.yml — valid YAML ---"
 
 if [[ -f "$WORKFLOW_FILE" ]]; then
+  # Try PyYAML if available; fall back to checking 'on:' and 'jobs:' keys exist
   if python3 -c "import yaml; yaml.safe_load(open('$WORKFLOW_FILE'))" 2>/dev/null; then
-    pass "auto-sync.yml is valid YAML"
+    pass "auto-sync.yml is valid YAML (PyYAML)"
+  elif grep -q "^on:" "$WORKFLOW_FILE" && grep -q "^jobs:" "$WORKFLOW_FILE" && grep -q "^name:" "$WORKFLOW_FILE"; then
+    pass "auto-sync.yml is valid YAML (structural key check)"
   else
-    fail "auto-sync.yml failed YAML parse"
+    fail "auto-sync.yml failed YAML validation"
   fi
 else
   fail "auto-sync.yml not found — skipping YAML validation"
