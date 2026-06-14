@@ -88,6 +88,7 @@ docs/auto/agent-flow.md
 docs/auto/copilot-cloud-setup.md
 docs/auto/file-buckets.md
 docs/auto/github-access.md
+docs/auto/template-propagation.md
 
 # ---------------------------------------------------------------------------
 # Framework versioning & release artefacts (future — see noted issues)
@@ -99,4 +100,4 @@ CHANGELOG.md    # (added by issue/85)
 # Sync tooling (future — see noted issues)
 # ---------------------------------------------------------------------------
 bin/auto-sync       # (added by issue/91)
-.autosyncignore     # (added by issue/88)
+.autosyncignore
