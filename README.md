@@ -1,8 +1,33 @@
-# Auto — Multi-Agent Software Development Template
+# Auto — Multi-Agent Software Development Framework
 
-A project template that structures development using specialized AI agents, test-driven development, and GitHub Issues. Works with **GitHub Copilot** and **Claude Code**.
+**This is the Auto framework source repository** — where the workflow, slash commands, git hooks, and CI templates are developed and maintained.
 
-## Quick Start
+If you want to **use Auto in your own project**, start from the template instead:
+→ **[Mpfk/auto-template](https://github.com/Mpfk/auto-template)** — click "Use this template" to create your project.
+
+## Distribution model
+
+Auto uses a two-repo topology:
+
+| Repo | Purpose |
+|------|---------|
+| **[Mpfk/auto](https://github.com/Mpfk/auto)** (this repo) | Framework source — developed here, versioned here |
+| **[Mpfk/auto-template](https://github.com/Mpfk/auto-template)** | Consumer template — created from here, kept in sync via `bin/auto-sync` |
+
+Consumers create their project from `auto-template` ("Use this template"). The `auto-sync` workflow in each consumer repo runs weekly and opens a PR when the framework ships updates. Framework files are propagated; consumer files (`workflow.conf`, `CLAUDE.md`, `1xx-` hook scripts) are never touched.
+
+## Consumer quick start
+
+Consumers start from [Mpfk/auto-template](https://github.com/Mpfk/auto-template):
+
+1. Click **"Use this template"** → **"Create a new repository"**
+2. Activate git hooks in your new repo: `git config core.hooksPath .githooks`
+3. Enable **"Allow GitHub Actions to create and approve pull requests"** (Settings → Actions → General)
+4. _(Optional)_ Run the **Auto Framework Sync** workflow once for an immediate sync
+
+Then use `/issue`, `/auto`, and `/merge` in Claude Code, or `@issue`, `@orchestrate`, and `@merge` in GitHub Copilot.
+
+## Framework development quick start
 
 ### Claude Code
 1. Clone this template into your new project
@@ -46,7 +71,7 @@ flowchart TD
 
 Every piece of work is tracked as a GitHub Issue, developed on its own `issue/{number}` branch, implemented test-first, and documented before reaching `main`. The two gates — the plan and the merge — are the control points: `/auto` self-approves them for hands-off delivery, while `/issue` and `/merge` stop for you.
 
-## Setup
+## Framework development setup
 
 ### Claude Code
 
