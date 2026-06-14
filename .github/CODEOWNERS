@@ -1,0 +1,9 @@
+# CODEOWNERS — require explicit review for sensitive framework paths.
+# Auto-sync PRs update these paths; a human must review before merging.
+# See docs/auto/template-propagation.md for the sync model.
+
+# GitHub Actions workflows and configuration — require repo owner review
+/.github/         @Mpfk
+
+# Git hooks — framework-owned; consumer extensions (100+) also live here
+/.githooks/       @Mpfk

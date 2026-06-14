@@ -62,6 +62,7 @@
 # ---------------------------------------------------------------------------
 # GitHub configuration — framework-owned
 # ---------------------------------------------------------------------------
+.github/CODEOWNERS
 .github/copilot-instructions.md
 .github/hooks/doc-freshness.json
 .github/hooks/scripts/doc-freshness.sh
