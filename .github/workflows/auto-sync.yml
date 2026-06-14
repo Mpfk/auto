@@ -41,12 +41,15 @@ jobs:
           git add -A
           git commit -m "chore: sync Auto framework to v${VERSION}"
           git push origin "$BRANCH"
+          sed 's/^ *//' > /tmp/pr-body.md <<EOF
+            Automated framework sync from [Mpfk/auto](https://github.com/Mpfk/auto) v${VERSION}.
+
+            Review the diff carefully before merging — this updates framework files.
+            Your config (\`workflow.conf\`, \`.claude/settings.json\`) and consumer hooks (\`1xx-\` scripts) are untouched per \`.autosyncignore\`.
+
+            See [\`docs/auto/template-propagation.md\`](docs/auto/template-propagation.md) for the ownership model.
+          EOF
           gh pr create \
             --title "chore: sync Auto framework to v${VERSION}" \
-            --body "Automated framework sync from [Mpfk/auto](https://github.com/Mpfk/auto) v${VERSION}.
-
-Review the diff carefully before merging — this updates framework files.
-Your config (\`workflow.conf\`, \`.claude/settings.json\`) and consumer hooks (\`1xx-\` scripts) are untouched per \`.autosyncignore\`.
-
-See [\`docs/auto/template-propagation.md\`](docs/auto/template-propagation.md) for the ownership model." \
+            --body-file /tmp/pr-body.md \
             --label "chore"

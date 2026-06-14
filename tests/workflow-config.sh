@@ -166,6 +166,61 @@ else
   fi
 fi
 
+# --- 11. every workflow file is valid YAML; run: block scalars are never broken
+#         by an under-indented continuation line (#135). The auto-sync.yml PR-body
+#         was a multi-line double-quoted string inside a `run: |` block whose
+#         continuation lines sat at column 0, terminating the block scalar and
+#         making GitHub reject the whole workflow (0s "workflow file issue" run,
+#         workflow_dispatch 422, schedule never firing). Guard the defect class:
+#         (a) structural — no column-0, non-blank, non-comment line may appear
+#             between a `run: |`/`run: >` block opener and the next dedented YAML
+#             key in any workflow file; and
+#         (b) semantic — if a YAML loader is available, every workflow file must
+#             parse (skipped cleanly when no loader is present).
+for wf_file in "$WF"/*.yml; do
+  [ -e "$wf_file" ] || continue
+  wf_name="$(basename "$wf_file")"
+
+  # (a) Structural scan: find column-0 shell text inside run: block scalars.
+  bad_line="$(awk '
+    # Detect the start of a block-scalar run: step, capturing its indent.
+    /^[[:space:]]*run:[[:space:]]*[|>]/ {
+      in_block = 1
+      match($0, /^[[:space:]]*/)
+      block_indent = RLENGTH
+      next
+    }
+    in_block {
+      # Blank lines stay inside the block scalar.
+      if ($0 ~ /^[[:space:]]*$/) next
+      # A line indented MORE than the run: key is block content — OK.
+      match($0, /^[[:space:]]*/)
+      this_indent = RLENGTH
+      if (this_indent > block_indent) next
+      # A dedented line ends the block. If it sits at column 0 and is not a
+      # comment, it is the smoking gun: shell text that escaped the scalar.
+      if (this_indent == 0 && $0 !~ /^#/) {
+        print NR ": " $0
+      }
+      in_block = 0
+    }
+  ' "$wf_file")"
+  if [ -n "$bad_line" ]; then
+    fail "$wf_name has column-0 line(s) inside a run: block scalar (broken continuation): $bad_line"
+  else
+    pass "$wf_name: no under-indented continuation inside run: block scalars"
+  fi
+
+  # (b) Semantic scan: load the YAML if a loader is available.
+  if command -v ruby >/dev/null 2>&1; then
+    if ruby -ryaml -e "YAML.load_file(ARGV[0])" "$wf_file" >/dev/null 2>&1; then
+      pass "$wf_name: parses as valid YAML"
+    else
+      fail "$wf_name: is not valid YAML (GitHub will reject the workflow)"
+    fi
+  fi
+done
+
 if [ "$FAILED" -ne 0 ]; then
   echo ""
   echo "Workflow config assertions FAILED."
