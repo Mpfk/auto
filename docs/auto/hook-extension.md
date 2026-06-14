@@ -29,8 +29,8 @@ Scripts run in shell lexical order (`010-…` before `020-…` before `100-…`)
 
 | Range | Owner | Behavior |
 |-------|-------|----------|
-| `000`–`099` | Auto framework | The sync updater may overwrite these files on framework updates. |
-| `100`+ | Consumer repo | The updater never touches these files. They run after all Auto scripts. |
+| `000`–`099` | Auto framework | Auto's built-in hook scripts. If you ever re-copy framework files from the template, these are the ones that get refreshed. |
+| `100`+ | Consumer repo | Your own hook scripts. They run after all Auto scripts. |
 
 Auto's built-in scripts currently occupy the `010`–`030` range. The full `000`–`099` band is reserved so future Auto scripts can be inserted without conflicting with consumer hooks.
 
@@ -56,9 +56,15 @@ Consumer scripts receive the same arguments as the dispatcher (for commit-msg ho
 
 ## Surviving framework updates
 
-Auto's sync updater respects the `100+` range — it will never create, overwrite, or delete files with a `1xx` or higher prefix. Your consumer hooks survive every framework update automatically.
+Hooks are **snapshot files**: they were copied into your repo once, when you
+clicked "Use this template", and Auto has no mechanism to overwrite them
+afterward. There is nothing to protect against — your consumer hooks survive
+every framework update automatically, because there is no automatic update.
 
-If you use `.autosyncignore` (see issue #88 / #91) you can protect additional specific files from being overwritten, including scripts in the `000`–`099` range that you have intentionally customized.
+The `100+` range matters only if you choose to **manually re-copy** Auto's
+built-in hooks from the template to pick up improvements (see
+[`UPGRADING.md`](UPGRADING.md)). A re-copy touches only the `000`–`099` scripts
+Auto ships; your `1xx` scripts are never part of that copy, so they stay put.
 
 ## Summary
 

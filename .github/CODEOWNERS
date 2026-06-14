@@ -1,6 +1,7 @@
 # CODEOWNERS — require explicit review for sensitive framework paths.
-# Auto-sync PRs update these paths; a human must review before merging.
-# See docs/auto/template-propagation.md for the sync model.
+# These paths carry executable framework logic (CI workflows, git hooks); a
+# human must review changes before merging.
+# See docs/auto/file-buckets.md for how files are distributed.
 
 # GitHub Actions workflows and configuration — require repo owner review
 /.github/         @Mpfk

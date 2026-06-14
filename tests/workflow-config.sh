@@ -178,15 +178,17 @@ else
   fail "CLAUDE.md must document bin/setup-hooks for worktree/clone hook activation"
 fi
 
-# --- 10. release-process.md documents the auto-sync manual-dispatch 422 caveat (#132) ---
+# --- 10. release-process.md documents the native @v1 tag-move release model (#141) ---
+# Releasing moves the floating major tag (v1) so @v1 consumers of the reusable
+# workflow receive the update for free — no sync engine, no cron, no token.
 RELEASE_DOC="$ROOT/docs/auto/release-process.md"
 if [ ! -f "$RELEASE_DOC" ]; then
   fail "docs/auto/release-process.md missing"
 else
-  if grep -qF "422" "$RELEASE_DOC" && grep -qiE 'weekly cron' "$RELEASE_DOC"; then
-    pass "release-process.md documents the manual-dispatch 422 caveat and weekly-cron fallback"
+  if grep -qiE 'major tag|floating' "$RELEASE_DOC" && grep -qF '@v1' "$RELEASE_DOC"; then
+    pass "release-process.md documents moving the major (@v1) tag so consumers receive updates"
   else
-    fail "release-process.md verification step must note manual dispatch may 422 until re-registration, with the weekly cron as the reliable fallback"
+    fail "release-process.md must document moving the floating major tag (v1) so @v1 consumers receive the release"
   fi
 fi
 
@@ -271,9 +273,12 @@ NEEDLE="AUTO_SYNC""_TOKEN"
 HITS="$(grep -rIl "$NEEDLE" "$ROOT" \
     --exclude-dir=.git \
     --exclude-dir=node_modules \
-    --exclude="workflow-config.sh" 2>/dev/null | sed "s#$ROOT/##" | tr '\n' ' ')"
+    --exclude="workflow-config.sh" \
+    --exclude="CHANGELOG.md" 2>/dev/null | sed "s#$ROOT/##" | tr '\n' ' ')"
+# CHANGELOG.md is an append-only historical record; it documents the token's
+# removal (and its prior existence) and is intentionally exempt.
 if [ -n "$HITS" ]; then
-  fail "$NEEDLE still referenced (no token setup may remain): $HITS"
+  fail "$NEEDLE still referenced outside the changelog (no live token setup may remain): $HITS"
 else
   pass "no $NEEDLE reference anywhere in the repo"
 fi

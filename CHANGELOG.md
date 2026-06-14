@@ -7,6 +7,29 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.3.0] - 2026-06-14
+
+Native-GitHub-only distribution. Auto is now adopted with one click ("Use this
+template") and updated through native GitHub primitives — no custom sync engine,
+no scheduled job, and no personal access token.
+
+### Added
+
+- Reusable CI workflow `reusable-pr-checks.yml` (`on: workflow_call`) holding the test/commit-lint/policy logic. Consumer repos reference it by major tag (`uses: Mpfk/auto/.github/workflows/reusable-pr-checks.yml@v1`) and receive updates automatically with the default `GITHUB_TOKEN`. This repo dogfoods the pattern via a local `./` caller.
+- README "Getting started": Use this template → edit `workflow.conf` → `bin/setup-hooks`. No tokens.
+
+### Changed
+
+- `pr-checks.yml` is now a thin caller of `reusable-pr-checks.yml` (keeps the load-bearing "PR Checks" status name for `ci-issue-gate`).
+- Instruction files (`.claude/` commands, `.github/agents`, `CLAUDE.md`, hooks, docs) are an explicit one-time snapshot from the template; there is no auto-update mechanism for them.
+- Rewrote distribution docs for the native model: `auto-template-repo.md`, `file-buckets.md` (snapshot / reusable-workflow / config buckets), `release-process.md` (move the `v1` tag on release), `UPGRADING.md`, `hook-extension.md`.
+
+### Removed
+
+- The entire custom sync engine: `bin/auto-sync`, the weekly `auto-sync.yml` cron workflow, the `.auto-framework-paths` allow-list, and the `.autosyncignore` ignore-list.
+- The `AUTO_SYNC_TOKEN` opt-in PAT — no token setup is required anywhere.
+- `docs/auto/template-propagation.md` and the orphaned sync tests (`tests/test-auto-sync.sh`, `tests/test-autosyncignore.sh`, `tests/test-framework-paths.sh`).
+
 ## [0.2.0] - 2026-06-14
 
 First properly signed release. Supersedes the unsigned `v0.1.0` pilot tag.
@@ -48,6 +71,7 @@ First properly signed release. Supersedes the unsigned `v0.1.0` pilot tag.
 - Copilot agent definitions (`.github/agents/`) for GitHub-native orchestration.
 - Documentation: `docs/auto/agent-flow.md`, `docs/auto/github-access.md`, `docs/auto/copilot-cloud-setup.md`.
 
-[Unreleased]: https://github.com/Mpfk/auto/compare/v0.2.0...HEAD
+[Unreleased]: https://github.com/Mpfk/auto/compare/v0.3.0...HEAD
+[0.3.0]: https://github.com/Mpfk/auto/compare/v0.2.0...v0.3.0
 [0.2.0]: https://github.com/Mpfk/auto/compare/v0.1.0...v0.2.0
 [0.1.0]: https://github.com/Mpfk/auto/releases/tag/v0.1.0
