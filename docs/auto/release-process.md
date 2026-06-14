@@ -40,13 +40,24 @@ When adding a new framework file or directory to Auto, add its path to `.auto-fr
 
 ## Release steps
 
-Follow these steps in order. All commands run on the `main` branch after the work for the release has already been merged.
+Follow these steps in order, after the work for the release has already been merged.
+
+`main` is branch-protected: direct pushes are forbidden and a branch-guard pre-commit hook blocks commits to `main`. So the version-bump commit (`.auto-version` + `CHANGELOG.md`) goes through an `issue/{n}` branch and a PR like any other change — it is **not** committed directly to `main`. Only the tagging steps (5–6) run on `main`, after that release PR has merged. Steps 2–4 below therefore happen on the release branch; Steps 5–7 happen on `main`.
 
 ### 1. Determine the new version
 
 Decide the new `MAJOR.MINOR.PATCH` version according to the rules above. The current version is in `.auto-version`.
 
 ### 2. Update `.auto-version`
+
+First file a release-tracking issue and create an `issue/{n}` branch off `main`:
+
+```bash
+git checkout main && git pull
+git checkout -b issue/{n}
+```
+
+Steps 2–4 are performed on this branch (not on `main`, which is branch-protected).
 
 Edit `.auto-version` to contain the new version. The file must be a single line with no trailing newline:
 
@@ -70,24 +81,42 @@ Move everything under `[Unreleased]` into a new dated section, and update the co
 
 Leave an empty `[Unreleased]` section above the new entry for the next release.
 
-### 4. Commit the release
+### 4. Commit the release and merge via PR
+
+On the `issue/{n}` branch, commit the version bump with a **signed** commit (branch protection on `main` requires signed commits):
 
 ```bash
 git add .auto-version CHANGELOG.md
-git commit -m "chore(release): vX.Y.Z"
+git commit -S -m "chore(release): vX.Y.Z"
 ```
 
-The commit-msg hook does not append `Closes #N` on `main`, so the message stays clean.
+The commit-msg hook appends `Closes #N` on an `issue/*` branch — that is expected and fine; it closes the release-tracking issue when the PR merges.
+
+Then open a PR, wait for CI to pass, and merge it to `main`:
+
+```bash
+git push -u origin issue/{n}
+gh pr create --fill
+# once CI is green:
+gh pr merge --squash --delete-branch
+```
+
+The release commit is now on `main`. The tagging steps below run against that merged commit.
 
 ### 5. Create a signed tag
 
+Switch to `main` and pull so the tag is created from the merged release commit:
+
 ```bash
+git checkout main && git pull
 git tag -s vX.Y.Z -m "Release vX.Y.Z"
 ```
 
 A signed tag (`-s`) is required. Unsigned tags are not considered valid release markers by `bin/auto-sync`.
 
 ### 6. Push the tag
+
+With `main` checked out and up to date (from Step 5), push the tag:
 
 ```bash
 git push origin vX.Y.Z
