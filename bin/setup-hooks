@@ -1,0 +1,51 @@
+#!/usr/bin/env bash
+# bin/setup-hooks — activate the Auto git hooks in this checkout or worktree.
+#
+# Why this exists:
+#   Hooks live in the tracked .githooks/ directory. Git only runs them when
+#   core.hooksPath points there. Worktrees created with `git worktree add`
+#   share the main repo's .git/config, so they inherit whatever core.hooksPath
+#   the shared config holds. If that value is an ABSOLUTE path (e.g. pointing at
+#   the main checkout's empty .git/hooks), no hooks fire in any worktree — the
+#   commit-msg hook (Closes #N) and the pre-commit guards (branch, doc
+#   placement, TDD cycle) are silently bypassed.
+#
+#   This script sets the RELATIVE path `.githooks`. Git resolves a relative
+#   core.hooksPath against the top of the current working tree, so the single
+#   shared value resolves correctly in the main checkout AND in every worktree.
+#
+# Usage:
+#   bin/setup-hooks          # activate hooks for this clone/worktree
+#
+# Idempotent: safe to run repeatedly. Run it once after cloning, and once in
+# each new worktree (`git worktree add` does not run it for you).
+
+set -euo pipefail
+
+# Resolve repo root from this script's location so it works from any cwd.
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+ROOT="$(cd "$SCRIPT_DIR/.." && pwd)"
+cd "$ROOT"
+
+# Canonical activation command (kept literal for tooling/grep):
+#   git config core.hooksPath .githooks
+DESIRED=".githooks"
+
+if [ ! -d "$ROOT/$DESIRED" ]; then
+  echo "ERROR: $DESIRED/ not found at repo root ($ROOT)." >&2
+  echo "Are you running this inside an Auto checkout?" >&2
+  exit 1
+fi
+
+current="$(git config --get core.hooksPath || true)"
+
+if [ "$current" = "$DESIRED" ]; then
+  echo "Hooks already active: core.hooksPath = $DESIRED"
+  exit 0
+fi
+
+git config core.hooksPath "$DESIRED"
+echo "Activated git hooks: core.hooksPath = $DESIRED"
+if [ -n "$current" ]; then
+  echo "(was: $current)"
+fi

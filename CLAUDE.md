@@ -75,11 +75,19 @@ Everything between the gates is automated. `/auto` also self-approves both gates
 
 ## Git Hooks
 
-Activate once after cloning:
+Activate once after cloning **and once in every new worktree**:
 
 ```
-git config core.hooksPath .githooks
+bin/setup-hooks
 ```
+
+This runs `git config core.hooksPath .githooks` idempotently. The relative
+`.githooks` path is what makes hooks fire correctly inside `git worktree`
+checkouts: worktrees share the main repo's `.git/config`, and a relative
+`core.hooksPath` is resolved against each working tree's own root. An absolute
+value (e.g. pointing at the main checkout's empty `.git/hooks`) would silently
+bypass all hooks in every worktree. **`git worktree add` does not run this for
+you** — agents and humans creating a worktree must run `bin/setup-hooks` in it.
 
 Enforces locally:
 - **Pre-commit:** branch guard (no commits to `main`), doc placement (docs in `docs/`), TDD cycle (test commits before source-only commits on issue branches)
