@@ -110,6 +110,46 @@ When a new consumer-owned path type is identified:
 3. Ensure the path does **not** appear in `.auto-framework-paths`.
 4. Run both test scripts to confirm no overlap.
 
+## Consumer onboarding — first-run notes
+
+Two behaviors surprise new consumers on their very first day. Both are correct
+by design; they just need to be known up front.
+
+### Snapshot lag — run `bin/auto-sync` once after setup (F-2)
+
+`Mpfk/auto-template` is a **point-in-time snapshot** of the Auto source repo at
+the last release. If any framework files were added to `Mpfk/auto` after that
+release but before the consumer created their repo, those files will be missing
+until the next sync.
+
+**Fix:** run `bin/auto-sync` once immediately after cloning and configuring your
+new repo:
+
+```bash
+git config core.hooksPath .githooks
+bin/auto-sync --skip-verify   # pull latest stable release
+```
+
+This is safe to run before any consumer code exists. If the consumer is already
+at the latest release version the script exits cleanly with "Already up to date."
+
+### Branch-guard hook — first commit must be on a branch (F-3)
+
+The `.githooks/pre-commit.d/010-branch-guard.sh` hook blocks direct commits to
+`main`. This fires on the very first commit too, which can be surprising.
+
+**The hook is correct** — all Auto workflow changes flow through `issue/N`
+branches. New consumers must create a branch before their first commit:
+
+```bash
+git checkout -b issue/1
+# make changes, then:
+git commit -m "chore: initial project setup"
+# open a PR to merge into main
+```
+
+See `CLAUDE.md` (shipped with the template) for the complete workflow guide.
+
 ## Known gotcha — GITHUB_TOKEN and CI
 
 The auto-sync workflow authenticates with `GITHUB_TOKEN` (the default GitHub

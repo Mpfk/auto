@@ -2,6 +2,18 @@
 
 This document describes how to cut a new release of Auto. Releases produce a semver tag that consumer repos use to detect when a framework update is available via `bin/auto-sync`.
 
+## Prerequisites
+
+> **`bin/auto-sync` requires at least one `v*` tag on the upstream repo.**
+>
+> The sync script uses `git ls-remote --tags` to discover the latest release.
+> If no `v*` tag exists, consumers will see the error:
+> `ERROR: No v* tags found on upstream repo… Create a release tag first.`
+>
+> This means the very first release tag (`v0.1.0` or similar) **must be
+> created and pushed before `bin/auto-sync` is usable by any consumer repo.**
+> Follow the [Release steps](#release-steps) below to create that first tag.
+
 ## Initial setup
 
 Before cutting the first release tag, a repo admin must configure the secret that the release mirror job uses to push framework files to `Mpfk/auto-template`:
