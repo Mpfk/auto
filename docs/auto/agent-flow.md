@@ -29,6 +29,7 @@ Run `/issue` then `/merge` when you want a human at each gate; run `/auto` when 
 | Review Agent returns PASS | PR converted from draft to ready-for-review |
 | CI checks fail on PR | Develop Agent re-invoked with failure output and prior retrospective |
 | PR merged | Issue → `status/done` and closed |
+| No CI checks returned (Actions unavailable) | CI fallback: agent self-runs tests locally, sets label to `status/review` manually |
 
 ## Workflow Diagram
 
@@ -46,6 +47,9 @@ flowchart TD
     E --> CI{CI checks\npass?}
     CI -- Fail --> E
     CI -- Pass --> SR[Native automation:\nset label to status/review]
+    CI -- No checks\nActions unavailable --> CIFB[CI fallback: self-run tests\nlocally, label set manually]
+    CIFB -- Fail --> E
+    CIFB -- Pass --> SR
     SR --> F[Review Agent: validate]
     F -- Fails --> E
     F -- Passes --> CONV[Main conversation:\nconvert PR draft → ready-for-review]
@@ -59,6 +63,7 @@ flowchart TD
     style M fill:#2ecc71,color:#fff,stroke:#27ae60
     style SR fill:#f39c12,color:#fff,stroke:#e67e22
     style CI fill:#f39c12,color:#fff,stroke:#e67e22
+    style CIFB fill:#8e44ad,color:#fff,stroke:#6c3483
 ```
 
 ## Phase Coordination
@@ -105,7 +110,7 @@ Gates are decision points, not always human pauses. **`/auto` self-approves both
 **Prerequisites — all four required (enforced even under `/auto`):**
 1. Issue has `status/review` label
 2. Review Agent returned PASS
-3. CI checks are green on the PR
+3. CI checks are green on the PR **or** a "CI fallback" comment exists (GitHub Actions unavailable — agent self-ran tests locally)
 4. The PR is mergeable (no conflicts with `main`)
 
 Only after all four are satisfied is the PR converted from draft to ready-for-review and Gate 2 presented (or, under `/auto`, the merge performed).

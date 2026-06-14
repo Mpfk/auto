@@ -92,15 +92,21 @@ Open a **draft** PR from `issue/{number}` → `main` once the first commit is pu
 ### Phase 5: Review
 Before invoking the Review Agent: verify CI checks are green on the PR. If CI checks fail, re-invoke the **develop** agent with the exact failure output and the retrospective from the last develop agent run — do not proceed to the Review Agent until CI is green.
 
-Once CI is green on a draft PR, native automation sets issue label `status/review`. **Do not invoke the Review Agent while CI is failing.** Invoke the **review** agent with the issue number, branch, and acceptance criteria. Wait for it to complete. If it fails, fix issues and re-run.
+**CI fallback (GitHub Actions unavailable):** If `pull_request_read` returns zero CI checks (no checks of any kind — not pending, zero), GitHub Actions may be unavailable (billing, quota, or outage). This is a degraded path — prefer the normal GitHub Actions flow when available. In fallback mode:
+1. Run `TEST_CMD` from `workflow.conf` locally: `source workflow.conf && eval "$TEST_CMD"`
+2. Validate commit messages: check each commit subject against `^(feat|fix|test|refactor|docs|chore)(\(.+\))?: .+`
+3. If any check fails, fix with the develop agent and re-run from step 1.
+4. If all pass, post a comment on the issue: "CI fallback: GitHub Actions appear unavailable. Ran test suite and commit validation locally — all passed. Advancing to status/review manually." Then set `status/review` via `issue_write`.
 
-When the Review Agent returns PASS and CI is confirmed green: convert the PR from **draft to ready-for-review**. This is the only point at which the PR draft state is lifted.
+Once CI is green (or CI fallback passed) on a draft PR, set issue label `status/review`. **Do not invoke the Review Agent while CI is failing.** Invoke the **review** agent with the issue number, branch, and acceptance criteria. Wait for it to complete. If it fails, fix issues and re-run.
+
+When the Review Agent returns PASS and CI is confirmed green (or fallback confirmed): convert the PR from **draft to ready-for-review**. This is the only point at which the PR draft state is lifted.
 
 ### Phase 6: Gate 2 — Merge Approval
 **You handle this in the main conversation.** Three prerequisites **MUST** all be satisfied before presenting Gate 2 — these are hard requirements:
 1. Issue has `status/review` label.
 2. Review Agent returned **PASS**.
-3. CI checks are **green** on the PR.
+3. CI checks are **green** on the PR **or** a "CI fallback" comment exists on the issue (GitHub Actions unavailable — tests ran locally).
 
 Once all three are confirmed, the PR has been converted from draft to ready-for-review. Present the review summary, retrospective, diff, and proposed merge commit, then prompt for approval (plain text — Copilot has no selection UI). On rejection: post a `## Retrospective — Iteration N` comment to the issue (where N = count of existing `## Retrospective — Iteration` comments + 1), update label to `status/researching`, go to Phase 2.
 
