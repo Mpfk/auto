@@ -96,6 +96,16 @@ After the tag is pushed, confirm:
 3. `cat .auto-version` on `main` reads the new version.
 4. `CHANGELOG.md` has the new version section with today's date and a non-empty entry.
 
+## Breaking changes
+
+When a release contains breaking changes (renamed files, changed hook contracts, renamed labels, altered CI workflow inputs, or a changed `.auto-version` format), it requires a **MAJOR** version bump. Before tagging:
+
+1. Add a dated migration entry to [`docs/auto/UPGRADING.md`](UPGRADING.md) using the template defined there.
+2. Add a `### Breaking Changes` subsection to `CHANGELOG.md` linking to that entry.
+3. Bump the MAJOR component in `.auto-version` (reset MINOR and PATCH to `0`).
+
+See [`docs/auto/UPGRADING.md`](UPGRADING.md) for the full checklist, the definition of breaking changes, and all per-release migration steps.
+
 ## Hotfix releases
 
 Hotfix releases follow the same process with a `PATCH` bump. Branch from the tag that needs patching (`git checkout -b hotfix/vX.Y.Z vX.Y.(Z-1)`), apply the fix, merge back to `main`, then cut the tag from `main`.
