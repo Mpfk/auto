@@ -30,36 +30,19 @@
 set -euo pipefail
 
 # ---------------------------------------------------------------------------
-# Defaults
+# Self-overwrite safety (issue #139)
 # ---------------------------------------------------------------------------
-UPSTREAM_REPO="https://github.com/Mpfk/auto"
-TAG=""
-SKIP_VERIFY=false
-
-# ---------------------------------------------------------------------------
-# Argument parsing
-# ---------------------------------------------------------------------------
-while [[ $# -gt 0 ]]; do
-  case "$1" in
-    --upstream)
-      UPSTREAM_REPO="$2"; shift 2 ;;
-    --tag)
-      TAG="$2"; shift 2 ;;
-    --skip-verify)
-      SKIP_VERIFY=true; shift ;;
-    -h|--help)
-      grep '^#' "$0" | grep -v '#!/' | sed 's/^# \{0,1\}//'
-      exit 0 ;;
-    *)
-      echo "auto-sync: unknown option: $1" >&2
-      exit 1 ;;
-  esac
-done
-
-# Allow test harness to override skip behavior
-if [[ "${AUTO_SYNC_SKIP_GPG_CHECK:-}" == "false" ]]; then
-  SKIP_VERIFY=false
-fi
+# bin/auto-sync lists ITSELF in .auto-framework-paths, so a sync copies a new
+# copy of this script over the running one mid-execution. Bash reads scripts
+# lazily on some platforms (notably Linux), so overwriting the file on disk
+# while it executes can truncate the remaining commands — skipping the
+# .auto-version stamp step and exiting 0 silently with a stale version.
+#
+# To be robust against this on EVERY platform, the entire program lives inside
+# main(). Bash parses a function body completely before executing it, so once
+# control enters main() the on-disk file is irrelevant — overwriting it cannot
+# change what the running process does. main "$@" is the final line of the
+# file; nothing executes at top level except fully-parsed function definitions.
 
 # ---------------------------------------------------------------------------
 # Helpers
@@ -69,18 +52,77 @@ log()  { echo "auto-sync: $*"; }
 warn() { echo "auto-sync: WARNING: $*" >&2; }
 die()  { echo "auto-sync: ERROR: $*" >&2; exit 1; }
 
-# Resolve the repo root (where this script is called from).
-# In tests the working directory IS the consumer repo.
-CONSUMER_ROOT="$(pwd)"
-
-# Temp directory — cleaned up on exit
+# Temp directory — cleaned up on exit (set inside main, read by cleanup).
 FETCH_DIR=""
 cleanup() {
   if [[ -n "$FETCH_DIR" && -d "$FETCH_DIR" ]]; then
     rm -rf "$FETCH_DIR"
   fi
 }
-trap cleanup EXIT
+
+# Check whether a path matches any ignore pattern (gitignore-style glob matching)
+# Returns 0 (match/ignore) or 1 (no match/allow). Reads the IGNORE_PATTERNS
+# array populated in main().
+path_is_ignored() {
+  local target="$1"
+  local pattern
+  for pattern in "${IGNORE_PATTERNS[@]}"; do
+    # Normalise: remove trailing slash for dir patterns when matching a file
+    local p="${pattern%/}"
+    # Use bash glob matching
+    # Match full path or prefix (for directory patterns)
+    # shellcheck disable=SC2254
+    case "$target" in
+      $p|$p/*) return 0 ;;
+    esac
+  done
+  return 1
+}
+
+# ---------------------------------------------------------------------------
+# main — the entire program. Defined as a function so bash parses it in full
+# before executing. This makes the run immune to bin/auto-sync overwriting
+# itself mid-sync (issue #139): once we are inside main, the on-disk script
+# can be replaced without affecting the in-memory parsed body.
+# ---------------------------------------------------------------------------
+main() {
+  trap cleanup EXIT
+
+  # -------------------------------------------------------------------------
+  # Defaults
+  # -------------------------------------------------------------------------
+  UPSTREAM_REPO="https://github.com/Mpfk/auto"
+  TAG=""
+  SKIP_VERIFY=false
+
+  # -------------------------------------------------------------------------
+  # Argument parsing
+  # -------------------------------------------------------------------------
+  while [[ $# -gt 0 ]]; do
+    case "$1" in
+      --upstream)
+        UPSTREAM_REPO="$2"; shift 2 ;;
+      --tag)
+        TAG="$2"; shift 2 ;;
+      --skip-verify)
+        SKIP_VERIFY=true; shift ;;
+      -h|--help)
+        grep '^#' "$0" | grep -v '#!/' | sed 's/^# \{0,1\}//'
+        exit 0 ;;
+      *)
+        echo "auto-sync: unknown option: $1" >&2
+        exit 1 ;;
+    esac
+  done
+
+  # Allow test harness to override skip behavior
+  if [[ "${AUTO_SYNC_SKIP_GPG_CHECK:-}" == "false" ]]; then
+    SKIP_VERIFY=false
+  fi
+
+  # Resolve the repo root (where this script is called from).
+  # In tests the working directory IS the consumer repo.
+  CONSUMER_ROOT="$(pwd)"
 
 # ---------------------------------------------------------------------------
 # Step 1: Determine the tag to sync
@@ -190,24 +232,6 @@ if [[ -f "$IGNORE_FILE" ]]; then
   done < "$IGNORE_FILE"
 fi
 
-# Check whether a path matches any ignore pattern (gitignore-style glob matching)
-# Returns 0 (match/ignore) or 1 (no match/allow)
-path_is_ignored() {
-  local target="$1"
-  local pattern
-  for pattern in "${IGNORE_PATTERNS[@]}"; do
-    # Normalise: remove trailing slash for dir patterns when matching a file
-    local p="${pattern%/}"
-    # Use bash glob matching
-    # Match full path or prefix (for directory patterns)
-    # shellcheck disable=SC2254
-    case "$target" in
-      $p|$p/*) return 0 ;;
-    esac
-  done
-  return 1
-}
-
 COPIED=0
 SKIPPED_IGNORE=0
 
@@ -275,4 +299,9 @@ log "Copied $COPIED file(s). Skipped $SKIPPED_IGNORE (consumer-owned)."
 log "Review changes with: git diff"
 log "Commit when satisfied: git add -p && git commit"
 
-exit 0
+  exit 0
+}
+
+# Entry point — by the time main runs, the entire script is parsed, so a
+# self-overwrite during the copy loop cannot truncate execution (issue #139).
+main "$@"
