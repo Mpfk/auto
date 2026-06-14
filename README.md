@@ -142,27 +142,43 @@ only if auto-detection doesn't match your setup.
 
 ---
 
+## Getting started
+
+Using Auto in your own project takes three steps — no tokens, no secrets, no
+setup scripts to babysit:
+
+1. **[Use this template](https://github.com/Mpfk/auto-template)** → *Use this template* → *Create a new repository*.
+2. Edit **`workflow.conf`** for your test command, source dirs, and test dirs (or leave it on auto-detect).
+3. Run **`bin/setup-hooks`** once to activate the local git hooks.
+
+That's it. Open your first issue and run `/auto` (or `/issue` then `/merge`).
+
 ## Distribution & updates
 
-GitHub templates copy files **once** — consumer repos don't normally receive
-framework updates. Auto solves this with a two-repo topology and an automatic
-sync:
+Auto is distributed entirely through **native GitHub features** — there is no
+custom sync engine, no scheduled job, and no personal access token to configure.
 
 | Repo | Role |
 |------|------|
 | **[Mpfk/auto](https://github.com/Mpfk/auto)** (this repo) | Framework **source** — developed and versioned here |
 | **[Mpfk/auto-template](https://github.com/Mpfk/auto-template)** | The **template** consumers instantiate |
 
-Each consumer repo carries an `auto-sync` workflow that runs weekly. When the
-framework ships a new release, it opens a PR with the updated framework files for
-you to review and merge. The split is strict:
+Updates arrive two ways, by design:
 
-- **Framework files** (commands, hooks, agents, CI, docs) — propagated on every sync.
-- **Your files** (`workflow.conf`, `CLAUDE.md`, `1xx-` hook scripts, `src/`, `tests/`) — **never touched**.
+- **CI logic — automatic and free.** The real CI lives in a **reusable workflow**
+  (`reusable-pr-checks.yml`). Your repo's `pr-checks.yml` is a one-job stub that
+  references it by major tag —
+  `uses: Mpfk/auto/.github/workflows/reusable-pr-checks.yml@v1`. When Auto ships a
+  release the `v1` tag moves and your repo picks it up on its next run, using only
+  the default `GITHUB_TOKEN`. Nothing to merge, nothing to wire up.
+- **Instruction files — a snapshot.** Slash commands, agent definitions,
+  `CLAUDE.md`, hooks, and docs are copied **once** when you create the repo and
+  are yours thereafter. To adopt newer instructions, re-copy the files you want
+  from the template. This keeps "Use this template" a clean, one-click start with
+  zero moving parts.
 
-No tokens or secrets are required — the sync pulls from the public source repo
-using each repo's own `GITHUB_TOKEN`. Full design:
-[`docs/auto/template-propagation.md`](docs/auto/template-propagation.md).
+Full design: [`docs/auto/auto-template-repo.md`](docs/auto/auto-template-repo.md)
+and [`docs/auto/file-buckets.md`](docs/auto/file-buckets.md).
 
 ---
 
@@ -176,8 +192,9 @@ in a project.
 3. *(Copilot only)* Configure MCP write access: [`docs/auto/copilot-cloud-setup.md`](docs/auto/copilot-cloud-setup.md)
 4. Use the same commands as any consumer — `/auto`, or `/issue` + `/merge` — to develop the framework.
 
-Releases are cut as signed semver tags; the template repo self-updates from them.
-See [`docs/auto/release-process.md`](docs/auto/release-process.md).
+Releases are cut as signed semver tags. Consumers track the major tag (`@v1`) on
+the reusable workflow, so moving `v1` to a new release rolls CI updates out to
+every repo for free. See [`docs/auto/release-process.md`](docs/auto/release-process.md).
 
 ---
 
@@ -192,10 +209,10 @@ See [`docs/auto/release-process.md`](docs/auto/release-process.md).
 ├── .github/
 │   ├── copilot-instructions.md # Workspace instructions (auto-loaded by Copilot)
 │   ├── agents/                 # Copilot agent definitions (.agent.md files)
-│   ├── workflows/              # GitHub Actions CI + auto-sync
+│   ├── workflows/              # GitHub Actions CI (reusable-pr-checks.yml + thin callers)
 │   └── ISSUE_TEMPLATE/         # Structured issue template
 ├── .githooks/                  # Git hook enforcement (local dev)
-├── bin/auto-sync               # Framework update sync engine
+├── bin/setup-hooks             # Idempotent git-hook activation (worktree-safe)
 ├── docs/                       # All project documentation
 ├── src/                        # Source code
 └── tests/                      # Test files
@@ -206,6 +223,7 @@ See [`docs/auto/release-process.md`](docs/auto/release-process.md).
 ## Docs
 
 - [`docs/auto/agent-flow.md`](docs/auto/agent-flow.md) — Complete workflow specification, state machine, and agent reference
-- [`docs/auto/template-propagation.md`](docs/auto/template-propagation.md) — Architecture & distribution model
+- [`docs/auto/auto-template-repo.md`](docs/auto/auto-template-repo.md) — Two-repo topology & native distribution model
+- [`docs/auto/file-buckets.md`](docs/auto/file-buckets.md) — Snapshot vs reusable-workflow vs config files
 - [`docs/auto/copilot-cloud-setup.md`](docs/auto/copilot-cloud-setup.md) — Copilot MCP write access setup
 - [`docs/auto/release-process.md`](docs/auto/release-process.md) — Cutting framework releases

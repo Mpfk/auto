@@ -1,104 +1,60 @@
 # Auto Template Repository
 
-The **`Mpfk/auto-template`** repository at
-[github.com/Mpfk/auto-template](https://github.com/Mpfk/auto-template) is a
-GitHub **template repository** that consumers instantiate via the "Use this
-template" button (or `gh repo create --template Mpfk/auto-template`). It is the
-canonical starting point for any new project using the Auto workflow framework.
+Auto is distributed through two repositories:
 
-## What it contains
+| Repo | Role |
+|------|------|
+| **[`Mpfk/auto`](https://github.com/Mpfk/auto)** | The **framework source**. This is where Auto is developed: slash commands, hooks, agents, docs, and the reusable CI workflow all live here and evolve here. It also hosts the release tags (`vX.Y.Z` and the floating `v1`) that consumers reference. |
+| **[`Mpfk/auto-template`](https://github.com/Mpfk/auto-template)** | The **clean template** consumers instantiate. It is a GitHub template repository — a tidied copy of the framework source with framework-internal test files and dev/design docs stripped out, ready for "Use this template". |
 
-The template ships exactly the files a new consumer needs:
+Consumers never clone `Mpfk/auto` directly. They click **"Use this template"** on
+`Mpfk/auto-template` (or run `gh repo create --template Mpfk/auto-template`),
+which produces a brand-new repository seeded with the Auto workflow scaffolding.
 
-### Framework files (Auto-owned, never edit)
+## What "Use this template" gives you
 
-All paths listed in `.auto-framework-paths` at the time of the last release:
+"Use this template" performs a **one-time snapshot copy** of the template repo's
+contents into your new repository. You get:
 
 - **Slash commands** — `.claude/commands/*.md`
 - **Git hooks** — `.githooks/` dispatchers, enforcement rules, and shared lib
-- **GitHub Actions** — all CI workflows under `.github/workflows/`
 - **Copilot agents** — `.github/agents/*.agent.md`
 - **GitHub config** — copilot instructions, issue template, PR template, labels
-- **Sync tooling** — `bin/auto-sync`, `.autosyncignore`, `.auto-framework-paths`
-- **Framework docs** — `docs/auto/agent-flow.md`, `docs/auto/github-access.md`,
-  `docs/auto/copilot-cloud-setup.md`, `docs/auto/hook-extension.md`,
-  `docs/auto/UPGRADING.md`
-- **Version stamp** — `.auto-version`
+- **Event-automation workflows** — the GitHub Actions that drive the workflow
+  state machine (issue automation, label sync, state guard, etc.)
+- **A thin CI caller** — `.github/workflows/pr-checks.yml`, which references
+  Auto's reusable PR-checks workflow by tag (see [Updates](#how-updates-work))
+- **Framework docs** — the consumer-facing docs under `docs/auto/`
+- **`workflow.conf`** — the one file you must edit
+- **`CLAUDE.md`**, **`README.md`**, **`.gitignore`** — starter files you own
 
-### Config seeds (consumer edits after setup)
+There are **no tokens, no PATs, and no secrets** to configure — not now, not
+ever. Auto runs entirely on GitHub's default `GITHUB_TOKEN`.
 
-Files that Auto seeds once and the consumer then owns:
+## Getting started
 
-- `workflow.conf` — seeded with `TEST_CMD=""` (auto-detect); consumer sets their
-  own test command, source dirs, and test dirs
-- `.claude/settings.json` — baseline allow-list for Claude Code hooks
-- `CLAUDE.md` — framework instructions; consumer adds project-specific rules
-- `README.md` — starter README; consumer replaces body with their project
-- `.gitignore` — common ignores; consumer adds project-specific entries
-
-### Consumer placeholder stubs
-
-- `src/.gitkeep` — marks where consumer source code goes
-- `tests/.gitkeep` — marks where consumer tests go
-- `docs/api/.gitkeep` — marks consumer API docs directory
-- `docs/decisions/.gitkeep` — marks consumer ADR directory
-
-## What it does NOT contain
-
-Intentionally excluded from the template:
-
-- **Framework test files** (`tests/test-*.sh`, `tests/workflow-config.sh`) —
-  these test Auto's own internals and do not belong in consumer repos
-- **Dev/design docs** (`docs/auto/file-buckets.md`,
-  `docs/auto/template-propagation.md`, `docs/auto/release-process.md`) — RFCs
-  and architecture documents for framework authors, not consumers
-- **Release tooling** — changelog generation, release scripts, and similar
-  automation are internal to the Auto source repo
-
-## How it stays current
-
-No secrets required. `auto-template` self-updates via its own `auto-sync.yml`
-workflow, which runs on a weekly schedule and pulls from the public `Mpfk/auto`
-repo using its own `GITHUB_TOKEN`. On each run it:
-
-1. Checks for a new release tag on `Mpfk/auto` (via `bin/auto-sync`).
-2. Copies every framework file listed in `.auto-framework-paths` to
-   `Mpfk/auto-template` (overwriting previous content).
-3. Stamps `.auto-version` with the new version.
-4. Opens a PR for review and merge.
-
-You can also trigger the sync manually from the Actions tab (Run workflow) to
-pull a new release immediately rather than waiting for the next weekly run.
-
-The template always reflects the latest stable release of the framework.
-
-> **Workflow-file caveat.** GitHub's default `GITHUB_TOKEN` cannot push to
-> `.github/workflows/**`, so by default the sync excludes workflow files and
-> lists them in the PR body for manual apply. To have workflow updates applied
-> automatically, configure the optional `AUTO_SYNC_TOKEN` secret — see
-> [`template-propagation.md`](template-propagation.md#workflow-file-propagation--the-auto_sync_token-opt-in).
-
-## Snapshot lag
-
-> **Newly created repos should run `bin/auto-sync` once after setup.**
-
-`Mpfk/auto-template` is a **point-in-time snapshot** of the Auto source repo at
-the moment of the most recent release. GitHub template instantiation copies
-exactly what is in the template repo at that instant.
-
-This means any framework files added to `Mpfk/auto` **after** the last release
-(but before the next one) will not appear in freshly instantiated consumer repos.
-They will arrive on the consumer's first `bin/auto-sync` run once a new release
-tag is cut.
-
-**Recommended first step after setup:**
+After creating your repo from the template:
 
 ```bash
-bin/auto-sync --skip-verify   # or without --skip-verify for GPG-verified sync
+gh repo create my-project --template Mpfk/auto-template --public --clone
+cd my-project
+
+# 1. Edit workflow.conf — set TEST_CMD for your language/framework
+#    (SRC_DIRS, TEST_DIRS, and MAIN_BRANCH are auto-detected; override if needed)
+
+# 2. Activate git hooks (required once per clone and once per worktree)
+bin/setup-hooks
+
+# 3. Create your first issue and start the workflow
+#    /issue "your first task"   (or /auto for the fully autonomous flow)
 ```
 
-This ensures the consumer starts from the most current stable release rather
-than the snapshot captured when the template was last updated.
+Editing `workflow.conf` is the **only required setup step**. Everything else
+works out of the box.
+
+> The GitHub UI path is identical: click **"Use this template"** on
+> [github.com/Mpfk/auto-template](https://github.com/Mpfk/auto-template), clone
+> the result, then run steps 1–3 above.
 
 ## First commit — branch guard
 
@@ -119,24 +75,51 @@ Then open a pull request to merge into `main`. This is the standard Auto
 workflow: all changes flow through `issue/N` branches. See `CLAUDE.md` for the
 full workflow guide.
 
-## Using the template
+## How updates work
 
-```bash
-# GitHub UI: click "Use this template" on github.com/Mpfk/auto-template
-# or via CLI:
-gh repo create my-project --template Mpfk/auto-template --public --clone
-cd my-project
+Auto distinguishes two kinds of content, and they update differently.
 
-# Activate git hooks
-git config core.hooksPath .githooks
+### Instruction files — a snapshot, updated manually
 
-# Run an initial sync to catch any post-snapshot framework additions
-bin/auto-sync --skip-verify
+The slash commands, agents, hooks, `CLAUDE.md`, and docs you received are a
+**point-in-time snapshot** taken when you clicked "Use this template". There is
+**no mechanism that auto-updates them** — by design. They are yours to edit, and
+nothing upstream will ever overwrite your local changes.
 
-# Customise for your project
-# Edit workflow.conf — set TEST_CMD for your language/framework
-# Edit CLAUDE.md — add project-specific conventions below the framework block
+If you want a newer version of the instruction files, you re-copy the files you
+care about from `Mpfk/auto-template` by hand (via `git`, the GitHub UI, or a
+plain download). See [`UPGRADING.md`](UPGRADING.md) for the recommended
+procedure. Accepting this manual step is a deliberate trade-off: it keeps the
+distribution model dead simple and token-free.
+
+### CI logic — updates automatically via the reusable workflow
+
+The actual PR-checks logic does **not** live in your repo. Your
+`.github/workflows/pr-checks.yml` is a thin caller that references Auto's
+reusable workflow by major tag:
+
+```yaml
+name: PR Checks
+on:
+  pull_request:
+    branches: [main]
+jobs:
+  checks:
+    uses: Mpfk/auto/.github/workflows/reusable-pr-checks.yml@v1
+    permissions:
+      contents: read
+      issues: read
+      pull-requests: read
 ```
 
-Enable the `auto-sync` workflow in repo Settings → Actions to receive future
-framework updates automatically.
+Because you pin the floating major tag `@v1`, whenever Auto cuts a new release
+and moves the `v1` tag forward, your repo picks up the updated CI logic
+**automatically, for free, on the next PR** — using only the default
+`GITHUB_TOKEN`. You take no action and configure no secrets.
+
+A breaking change to the CI contract ships as a new major (`v2`); you opt in
+when you're ready by bumping the `uses:` ref. See [`UPGRADING.md`](UPGRADING.md).
+
+> Auto's own repo (`Mpfk/auto`) dogfoods this exact pattern. Its `pr-checks.yml`
+> is a thin caller pointing at a **local** `./.github/workflows/reusable-pr-checks.yml`
+> reference, so the framework validates itself with the same logic consumers run.

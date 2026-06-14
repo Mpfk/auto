@@ -59,16 +59,40 @@ fi
 
 # --- 4. pr-checks.yml exists with jobs test:, check-commits:, policy: ---
 PRC="$WF/pr-checks.yml"
+REUSABLE_PRC="$WF/reusable-pr-checks.yml"
+# The real CI logic lives in a reusable workflow (on: workflow_call) so consumer
+# repos can reference it as `uses: Mpfk/auto/.github/workflows/reusable-pr-checks.yml@v1`
+# and receive updates for free via the default GITHUB_TOKEN. pr-checks.yml is a
+# thin caller that keeps the "PR Checks" status name (ci-issue-gate depends on it).
+if [ ! -f "$REUSABLE_PRC" ]; then
+  fail "reusable-pr-checks.yml missing (CI logic must live in a reusable workflow)"
+else
+  if grep -qE '^\s*workflow_call:' "$REUSABLE_PRC"; then
+    pass "reusable-pr-checks.yml is reusable (on: workflow_call)"
+  else
+    fail "reusable-pr-checks.yml must declare 'on: workflow_call'"
+  fi
+  for job in test check-commits policy; do
+    if grep -qE "^  ${job}:" "$REUSABLE_PRC"; then
+      pass "reusable-pr-checks.yml defines job '${job}'"
+    else
+      fail "reusable-pr-checks.yml missing job '${job}'"
+    fi
+  done
+fi
 if [ ! -f "$PRC" ]; then
   fail "pr-checks.yml missing"
 else
-  for job in test check-commits policy; do
-    if grep -qE "^  ${job}:" "$PRC"; then
-      pass "pr-checks.yml defines job '${job}'"
-    else
-      fail "pr-checks.yml missing job '${job}'"
-    fi
-  done
+  if grep -qE 'uses:\s*\./\.github/workflows/reusable-pr-checks\.yml' "$PRC"; then
+    pass "pr-checks.yml is a thin caller of reusable-pr-checks.yml"
+  else
+    fail "pr-checks.yml must call the reusable workflow (uses: ./.github/workflows/reusable-pr-checks.yml)"
+  fi
+  if grep -qE '^\s*name:\s*PR Checks' "$PRC"; then
+    pass "pr-checks.yml keeps the 'PR Checks' status name"
+  else
+    fail "pr-checks.yml must keep 'name: PR Checks' so ci-issue-gate's workflow_run still matches"
+  fi
 fi
 
 # --- 5. old workflow files removed ---
@@ -154,15 +178,17 @@ else
   fail "CLAUDE.md must document bin/setup-hooks for worktree/clone hook activation"
 fi
 
-# --- 10. release-process.md documents the auto-sync manual-dispatch 422 caveat (#132) ---
+# --- 10. release-process.md documents the native @v1 tag-move release model (#141) ---
+# Releasing moves the floating major tag (v1) so @v1 consumers of the reusable
+# workflow receive the update for free — no sync engine, no cron, no token.
 RELEASE_DOC="$ROOT/docs/auto/release-process.md"
 if [ ! -f "$RELEASE_DOC" ]; then
   fail "docs/auto/release-process.md missing"
 else
-  if grep -qF "422" "$RELEASE_DOC" && grep -qiE 'weekly cron' "$RELEASE_DOC"; then
-    pass "release-process.md documents the manual-dispatch 422 caveat and weekly-cron fallback"
+  if grep -qiE 'major tag|floating' "$RELEASE_DOC" && grep -qF '@v1' "$RELEASE_DOC"; then
+    pass "release-process.md documents moving the major (@v1) tag so consumers receive updates"
   else
-    fail "release-process.md verification step must note manual dispatch may 422 until re-registration, with the weekly cron as the reliable fallback"
+    fail "release-process.md must document moving the floating major tag (v1) so @v1 consumers receive the release"
   fi
 fi
 
@@ -221,48 +247,40 @@ for wf_file in "$WF"/*.yml; do
   fi
 done
 
-# --- 12. auto-sync.yml: AUTO_SYNC_TOKEN opt-in for .github/workflows/** (#137) ---
-# GitHub's default GITHUB_TOKEN may not create/update files under
-# .github/workflows/** (push rejected: "without `workflows` permission").
-# Hybrid opt-in fix: default path uses GITHUB_TOKEN and EXCLUDES workflow files
-# (listing them in the PR body for manual apply); when a fine-grained
-# AUTO_SYNC_TOKEN secret is present it is used for checkout + push so workflow
-# files propagate too.
-ASYNC="$WF/auto-sync.yml"
-if [ ! -f "$ASYNC" ]; then
-  fail "auto-sync.yml missing"
+# --- 12. Custom sync engine fully removed (#141) ---
+# Distribution is now native-GitHub-only: "Use this template" for instantiation
+# (snapshot) + reusable workflows referenced @v1 for CI updates. The bespoke
+# token-based sync engine (bin/auto-sync, weekly auto-sync.yml cron,
+# AUTO_SYNC_TOKEN PAT, .auto-framework-paths / .autosyncignore ownership
+# contracts) must be gone entirely.
+for gone in \
+  "$ROOT/bin/auto-sync" \
+  "$WF/auto-sync.yml" \
+  "$ROOT/.auto-framework-paths" \
+  "$ROOT/.autosyncignore" \
+  "$ROOT/docs/auto/template-propagation.md"; do
+  if [ -e "$gone" ]; then
+    fail "sync-engine artefact should be removed but still exists: ${gone#$ROOT/}"
+  else
+    pass "removed: ${gone#$ROOT/}"
+  fi
+done
+
+# --- 13. No AUTO_SYNC_TOKEN reference survives anywhere (#141) ---
+# No token setup is the whole point — a consumer must never wire up a PAT.
+# Build the needle by concatenation so this assertion does not match itself.
+NEEDLE="AUTO_SYNC""_TOKEN"
+HITS="$(grep -rIl "$NEEDLE" "$ROOT" \
+    --exclude-dir=.git \
+    --exclude-dir=node_modules \
+    --exclude="workflow-config.sh" \
+    --exclude="CHANGELOG.md" 2>/dev/null | sed "s#$ROOT/##" | tr '\n' ' ')"
+# CHANGELOG.md is an append-only historical record; it documents the token's
+# removal (and its prior existence) and is intentionally exempt.
+if [ -n "$HITS" ]; then
+  fail "$NEEDLE still referenced outside the changelog (no live token setup may remain): $HITS"
 else
-  # (a) checkout/push token selection uses AUTO_SYNC_TOKEN with GITHUB_TOKEN fallback.
-  if grep -qF 'secrets.AUTO_SYNC_TOKEN || secrets.GITHUB_TOKEN' "$ASYNC"; then
-    pass "auto-sync.yml selects AUTO_SYNC_TOKEN with GITHUB_TOKEN fallback"
-  else
-    fail "auto-sync.yml must use \${{ secrets.AUTO_SYNC_TOKEN || secrets.GITHUB_TOKEN }}"
-  fi
-
-  # (b) when the opt-in token is absent, workflow files under .github/workflows/
-  #     are excluded from the commit (reverted before git add).
-  if grep -qE 'git checkout -- \.github/workflows' "$ASYNC"; then
-    pass "auto-sync.yml excludes .github/workflows/ when opt-in token is absent"
-  else
-    fail "auto-sync.yml must revert/exclude .github/workflows/ changes when AUTO_SYNC_TOKEN is unset (git checkout -- .github/workflows/)"
-  fi
-
-  # (c) the secret is tested via an env var, never inlined into shell beyond the env mapping.
-  if grep -qE 'AUTO_SYNC_TOKEN:\s*\$\{\{\s*secrets\.AUTO_SYNC_TOKEN' "$ASYNC"; then
-    pass "auto-sync.yml maps AUTO_SYNC_TOKEN through env: (no raw shell interpolation)"
-  else
-    fail "auto-sync.yml must expose AUTO_SYNC_TOKEN through an env: mapping for the shell test"
-  fi
-fi
-
-# --- 13. template-propagation.md documents the AUTO_SYNC_TOKEN opt-in (#137) ---
-PROP_DOC="$ROOT/docs/auto/template-propagation.md"
-if [ ! -f "$PROP_DOC" ]; then
-  fail "docs/auto/template-propagation.md missing"
-elif grep -qF "AUTO_SYNC_TOKEN" "$PROP_DOC"; then
-  pass "template-propagation.md documents the AUTO_SYNC_TOKEN opt-in"
-else
-  fail "template-propagation.md must document the AUTO_SYNC_TOKEN opt-in for workflow-file sync"
+  pass "no $NEEDLE reference anywhere in the repo"
 fi
 
 if [ "$FAILED" -ne 0 ]; then
