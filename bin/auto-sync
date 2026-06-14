@@ -1,0 +1,278 @@
+#!/usr/bin/env bash
+# bin/auto-sync — Auto framework sync engine
+#
+# Fetches framework updates from an upstream Auto release tag and copies
+# allow-listed paths into the local repo, honoring .autosyncignore.
+# Changes are left uncommitted for consumer review.
+#
+# Usage:
+#   bin/auto-sync [--upstream <repo-url-or-path>] [--tag <tag>] [--skip-verify]
+#
+# Options:
+#   --upstream  URL or local path of the upstream Auto repo.
+#               Default: https://github.com/Mpfk/auto
+#   --tag       Release tag to sync from.
+#               Default: latest release tag on the upstream (git ls-remote).
+#   --skip-verify
+#               Skip GPG signature verification of the release tag.
+#               PRODUCTION USE: do NOT pass this flag — require signed tags.
+#               CI/test environments without GPG configured should set this.
+#
+# Environment variables:
+#   AUTO_SYNC_SKIP_GPG_CHECK=false
+#               Force signature check even when --skip-verify is implied by
+#               the environment. Useful in tests.
+#
+# Exit codes:
+#   0   Success (or already up to date)
+#   1   Error (bad tag, signature mismatch, fetch failure, etc.)
+
+set -euo pipefail
+
+# ---------------------------------------------------------------------------
+# Defaults
+# ---------------------------------------------------------------------------
+UPSTREAM_REPO="https://github.com/Mpfk/auto"
+TAG=""
+SKIP_VERIFY=false
+
+# ---------------------------------------------------------------------------
+# Argument parsing
+# ---------------------------------------------------------------------------
+while [[ $# -gt 0 ]]; do
+  case "$1" in
+    --upstream)
+      UPSTREAM_REPO="$2"; shift 2 ;;
+    --tag)
+      TAG="$2"; shift 2 ;;
+    --skip-verify)
+      SKIP_VERIFY=true; shift ;;
+    -h|--help)
+      grep '^#' "$0" | grep -v '#!/' | sed 's/^# \{0,1\}//'
+      exit 0 ;;
+    *)
+      echo "auto-sync: unknown option: $1" >&2
+      exit 1 ;;
+  esac
+done
+
+# Allow test harness to override skip behavior
+if [[ "${AUTO_SYNC_SKIP_GPG_CHECK:-}" == "false" ]]; then
+  SKIP_VERIFY=false
+fi
+
+# ---------------------------------------------------------------------------
+# Helpers
+# ---------------------------------------------------------------------------
+
+log()  { echo "auto-sync: $*"; }
+warn() { echo "auto-sync: WARNING: $*" >&2; }
+die()  { echo "auto-sync: ERROR: $*" >&2; exit 1; }
+
+# Resolve the repo root (where this script is called from).
+# In tests the working directory IS the consumer repo.
+CONSUMER_ROOT="$(pwd)"
+
+# Temp directory — cleaned up on exit
+FETCH_DIR=""
+cleanup() {
+  if [[ -n "$FETCH_DIR" && -d "$FETCH_DIR" ]]; then
+    rm -rf "$FETCH_DIR"
+  fi
+}
+trap cleanup EXIT
+
+# ---------------------------------------------------------------------------
+# Step 1: Determine the tag to sync
+# ---------------------------------------------------------------------------
+if [[ -z "$TAG" ]]; then
+  log "Determining latest release tag from upstream..."
+  # Use git ls-remote to find the latest annotated tag (vX.Y.Z pattern)
+  latest=$(git ls-remote --tags --refs "$UPSTREAM_REPO" 'refs/tags/v*' 2>/dev/null \
+    | awk '{print $2}' \
+    | sed 's|refs/tags/||' \
+    | grep -E '^v[0-9]+\.[0-9]+\.[0-9]+$' \
+    | sort -V \
+    | tail -1) || true
+
+  if [[ -z "$latest" ]]; then
+    die "Could not determine latest release tag from upstream: $UPSTREAM_REPO"
+  fi
+  TAG="$latest"
+  log "Latest upstream tag: $TAG"
+fi
+
+# Strip leading 'v' for version comparison
+TAG_VERSION="${TAG#v}"
+
+# ---------------------------------------------------------------------------
+# Step 2: Compare against local .auto-version
+# ---------------------------------------------------------------------------
+LOCAL_VERSION_FILE="$CONSUMER_ROOT/.auto-version"
+LOCAL_VERSION=""
+if [[ -f "$LOCAL_VERSION_FILE" ]]; then
+  LOCAL_VERSION="$(cat "$LOCAL_VERSION_FILE")"
+fi
+
+if [[ "$LOCAL_VERSION" == "$TAG_VERSION" ]]; then
+  log "Already up to date at version $LOCAL_VERSION. Nothing to do."
+  exit 0
+fi
+
+log "Syncing from version '${LOCAL_VERSION:-<none>}' to '$TAG_VERSION'..."
+
+# ---------------------------------------------------------------------------
+# Step 3: Fetch the tag from upstream (shallow clone to a temp dir)
+# ---------------------------------------------------------------------------
+FETCH_DIR="$(mktemp -d /tmp/auto-sync-XXXXXX)"
+
+log "Fetching tag $TAG from $UPSTREAM_REPO..."
+
+# Verify the tag exists on upstream before cloning
+if ! git ls-remote --tags "$UPSTREAM_REPO" "refs/tags/$TAG" 2>/dev/null | grep -q "$TAG"; then
+  die "Tag '$TAG' not found on upstream: $UPSTREAM_REPO"
+fi
+
+git clone --quiet --depth 1 --branch "$TAG" "$UPSTREAM_REPO" "$FETCH_DIR/upstream" 2>/dev/null \
+  || die "Failed to clone tag '$TAG' from '$UPSTREAM_REPO'. Ensure the tag exists."
+
+# ---------------------------------------------------------------------------
+# Step 4: Verify the tag signature
+# ---------------------------------------------------------------------------
+if [[ "$SKIP_VERIFY" == "true" ]]; then
+  warn "--skip-verify is set; skipping GPG signature verification."
+  warn "PRODUCTION USE: always verify signatures. Do not use --skip-verify in production."
+else
+  log "Verifying GPG signature on tag $TAG..."
+  # git tag -v requires the signing key to be in the local keyring.
+  # We run it inside the fetched repo where the tag is present.
+  verify_output=""
+  verify_exit=0
+  pushd "$FETCH_DIR/upstream" > /dev/null
+  # Check whether the tag is annotated and signed
+  tag_type=$(git cat-file -t "$TAG" 2>/dev/null || echo "unknown")
+  if [[ "$tag_type" == "tag" ]]; then
+    # Annotated tag — attempt to verify
+    verify_output=$(git tag -v "$TAG" 2>&1) || verify_exit=$?
+  else
+    # Lightweight (unannotated) tag — cannot have a GPG signature
+    verify_exit=1
+    verify_output="Tag '$TAG' is a lightweight tag; GPG signatures require annotated tags."
+  fi
+  popd > /dev/null
+
+  if [[ $verify_exit -ne 0 ]]; then
+    warn "Signature verification FAILED for tag '$TAG'."
+    warn "$verify_output"
+    warn "Run with --skip-verify to bypass (not recommended for production)."
+    die "Aborting: tag signature mismatch for '$TAG'."
+  fi
+  log "Signature verified."
+fi
+
+# ---------------------------------------------------------------------------
+# Step 5: Read allow-list and copy framework files
+# ---------------------------------------------------------------------------
+ALLOW_LIST="$FETCH_DIR/upstream/.auto-framework-paths"
+if [[ ! -f "$ALLOW_LIST" ]]; then
+  die "Upstream does not contain .auto-framework-paths — cannot determine which files to sync."
+fi
+
+IGNORE_FILE="$CONSUMER_ROOT/.autosyncignore"
+
+# Build an array of ignore patterns from .autosyncignore (strip blank/comment lines)
+IGNORE_PATTERNS=()
+if [[ -f "$IGNORE_FILE" ]]; then
+  while IFS= read -r line || [[ -n "$line" ]]; do
+    # Skip blank lines and comment lines
+    [[ -z "$line" || "$line" == \#* ]] && continue
+    IGNORE_PATTERNS+=("$line")
+  done < "$IGNORE_FILE"
+fi
+
+# Check whether a path matches any ignore pattern (gitignore-style glob matching)
+# Returns 0 (match/ignore) or 1 (no match/allow)
+path_is_ignored() {
+  local target="$1"
+  local pattern
+  for pattern in "${IGNORE_PATTERNS[@]}"; do
+    # Normalise: remove trailing slash for dir patterns when matching a file
+    local p="${pattern%/}"
+    # Use bash glob matching
+    # Match full path or prefix (for directory patterns)
+    # shellcheck disable=SC2254
+    case "$target" in
+      $p|$p/*) return 0 ;;
+    esac
+  done
+  return 1
+}
+
+COPIED=0
+SKIPPED_IGNORE=0
+
+log "Reading .auto-framework-paths and copying files..."
+
+while IFS= read -r line || [[ -n "$line" ]]; do
+  # Strip inline comments and whitespace
+  # Remove everything after ' #' (space-hash) to strip inline comments
+  entry="${line%% \#*}"
+  entry="$(echo "$entry" | sed 's/[[:space:]]*$//')"
+
+  # Skip blank lines and comment lines
+  [[ -z "$entry" || "$entry" == \#* ]] && continue
+
+  # Skip entries still marked as future (contain '#' annotation — shouldn't
+  # reach here after stripping, but guard anyway)
+  # If the original line has '# (added by issue/' it's a future entry
+  if echo "$line" | grep -q '# (added by issue/'; then
+    continue
+  fi
+
+  src="$FETCH_DIR/upstream/$entry"
+
+  # Skip if not present in upstream (path may not exist at this tag)
+  if [[ ! -e "$src" ]]; then
+    continue
+  fi
+
+  # Skip if path is ignored by .autosyncignore
+  if path_is_ignored "$entry"; then
+    SKIPPED_IGNORE=$((SKIPPED_IGNORE + 1))
+    continue
+  fi
+
+  dest="$CONSUMER_ROOT/$entry"
+
+  # Create parent directory if needed
+  dest_dir="$(dirname "$dest")"
+  if [[ ! -d "$dest_dir" ]]; then
+    mkdir -p "$dest_dir"
+  fi
+
+  if [[ -d "$src" ]]; then
+    # Directory: copy recursively
+    cp -r "$src/." "$dest_dir/$(basename "$dest")/" 2>/dev/null || cp -r "$src" "$dest_dir/"
+  else
+    # File: copy
+    cp "$src" "$dest"
+  fi
+
+  COPIED=$((COPIED + 1))
+
+done < "$ALLOW_LIST"
+
+# ---------------------------------------------------------------------------
+# Step 6: Write the new version stamp
+# ---------------------------------------------------------------------------
+printf '%s' "$TAG_VERSION" > "$LOCAL_VERSION_FILE"
+
+# ---------------------------------------------------------------------------
+# Step 7: Print summary
+# ---------------------------------------------------------------------------
+log "Updated Auto framework from v${LOCAL_VERSION:-<none>} to v${TAG_VERSION}."
+log "Copied $COPIED file(s). Skipped $SKIPPED_IGNORE (consumer-owned)."
+log "Review changes with: git diff"
+log "Commit when satisfied: git add -p && git commit"
+
+exit 0

@@ -97,7 +97,7 @@ CHANGELOG.md    # (added by issue/85)
 .auto-version   # (added by issue/85)
 
 # ---------------------------------------------------------------------------
-# Sync tooling (future — see noted issues)
+# Sync tooling
 # ---------------------------------------------------------------------------
-bin/auto-sync       # (added by issue/91)
+bin/auto-sync
 .autosyncignore
