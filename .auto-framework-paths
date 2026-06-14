@@ -87,6 +87,7 @@
 # Auto documentation (all files under docs/auto/)
 # ---------------------------------------------------------------------------
 docs/auto/agent-flow.md
+docs/auto/auto-template-repo.md
 docs/auto/copilot-cloud-setup.md
 docs/auto/file-buckets.md
 docs/auto/github-access.md

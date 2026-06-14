@@ -27,8 +27,13 @@ permissions: `contents: write` and `pull-requests: write`.
 Auto uses a vendored-sync distribution model:
 
 - **Auto source repo** (`Mpfk/auto`) — where the framework lives and is developed.
-- **Consumer repos** — any project that has installed Auto by copying the
-  framework files from the template.
+- **`Mpfk/auto-template`** ([github.com/Mpfk/auto-template](https://github.com/Mpfk/auto-template))
+  — a GitHub template repository that consumers instantiate via "Use this
+  template". It is bootstrapped with every framework file, config seeds, and
+  placeholder stubs. The release mirror job (issue #95) keeps it current on
+  each new release. See `docs/auto/auto-template-repo.md` for full details.
+- **Consumer repos** — any project that has installed Auto by clicking "Use this
+  template" on `Mpfk/auto-template` (or an earlier manual copy of the files).
 
 The sync binary (`bin/auto-sync`, issue #91) reads the canonical allow-list
 (`.auto-framework-paths`) to know which files it owns, propagates updates, and
