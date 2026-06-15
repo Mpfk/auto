@@ -332,6 +332,53 @@ else
   fail ".github/agents/merge.agent.md must handle the case when GitHub Actions are unavailable (no CI checks exist)"
 fi
 
+# --- 16. pr-checks.yml: paths-ignore skips CI for docs-only PRs ---
+# Running the full test suite on documentation-only PRs wastes Actions minutes.
+# A paths-ignore filter on the pull_request trigger skips the workflow when only
+# docs/ or CHANGELOG.md change; GitHub marks the skipped check as passing for
+# required-status-check purposes.
+if [ ! -f "$PRC" ]; then
+  fail "pr-checks.yml missing (already reported above)"
+elif grep -qE 'paths-ignore:' "$PRC"; then
+  pass "pr-checks.yml has paths-ignore to skip CI on non-code PRs"
+else
+  fail "pr-checks.yml missing paths-ignore: (CI runs on every PR including docs-only changes)"
+fi
+if [ -f "$PRC" ] && grep -qF "docs/**" "$PRC"; then
+  pass "pr-checks.yml paths-ignore covers docs/**"
+else
+  fail "pr-checks.yml paths-ignore must include 'docs/**' to skip docs-only PRs"
+fi
+
+# --- 17. issue-native-automation: concurrency group prevents duplicate runs ---
+# Rapid label changes or repeated /auto comment commands can fan out multiple
+# concurrent runs. A concurrency group keyed on issue number cancels earlier
+# in-progress runs, mirroring the pattern already used in issue-state-guard.yml.
+if [ ! -f "$NATIVE" ]; then
+  fail "issue-native-automation.yml missing (already reported above)"
+elif grep -qE '^\s*concurrency:' "$NATIVE"; then
+  pass "issue-native-automation.yml has a concurrency: block"
+else
+  fail "issue-native-automation.yml missing concurrency: block (duplicate runs not cancelled)"
+fi
+if [ -f "$NATIVE" ] && grep -qE 'cancel-in-progress:\s*true' "$NATIVE"; then
+  pass "issue-native-automation.yml has cancel-in-progress: true"
+else
+  fail "issue-native-automation.yml missing cancel-in-progress: true"
+fi
+
+# --- 18. repo-setup.yml: path filter limits label sync to label-config changes ---
+# Without a paths filter the label-sync job runs on every push to main even when
+# nothing related to label configuration changed. Restrict to .github/labels.yml.
+RSETUP="$WF/repo-setup.yml"
+if [ ! -f "$RSETUP" ]; then
+  fail "repo-setup.yml missing"
+elif grep -qF 'labels.yml' "$RSETUP"; then
+  pass "repo-setup.yml push trigger is filtered to .github/labels.yml changes"
+else
+  fail "repo-setup.yml push trigger must include a paths filter for '.github/labels.yml'"
+fi
+
 if [ "$FAILED" -ne 0 ]; then
   echo ""
   echo "Workflow config assertions FAILED."
