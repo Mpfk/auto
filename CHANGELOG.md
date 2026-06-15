@@ -7,9 +7,20 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.4.0] - 2026-06-15
+
+GitHub Actions cost savings: fewer metered minutes and reduced event fan-out.
+
 ### Added
 
 - `bin/publish-template` — local maintainer tool that builds the consumer-form template snapshot (rewrites `pr-checks.yml` to the `@v1` caller, drops the hosted reusable workflow and dev-only files, adds `src/`/`tests/` placeholders) and pushes it to `Mpfk/auto-template`. Documented as release step 7. Deliberately not a CI workflow — that would require a PAT or cron.
+- `pr-checks.yml`: `paths-ignore` for `docs/**` and `CHANGELOG.md` — CI is skipped for documentation-only PRs; GitHub marks the skipped check as passing for required-status-check purposes.
+- `issue-native-automation.yml`: concurrency group keyed on issue number with `cancel-in-progress: true` — rapid label changes or repeated `/auto` comments no longer stack parallel runs (mirrors the pattern already in `issue-state-guard.yml`).
+- `repo-setup.yml`: push trigger restricted to `paths: ['.github/labels.yml']` — label sync only runs when label configuration actually changes.
+
+### Removed
+
+- Informational `createComment` calls from `ci-issue-gate.yml` (CI-failure and CI-pass comments) and `issue-native-automation.yml` ("Issue is ready", "Implementation kickoff", "Gate 1 approved" comments). Each comment was itself an issue event that cascaded back into `issue-state-guard.yml`; the information is directly observable through CI check status, labels, and branch existence. Error-guard comments (misconfiguration signals) are retained.
 
 ## [0.3.0] - 2026-06-14
 
@@ -75,7 +86,8 @@ First properly signed release. Supersedes the unsigned `v0.1.0` pilot tag.
 - Copilot agent definitions (`.github/agents/`) for GitHub-native orchestration.
 - Documentation: `docs/auto/agent-flow.md`, `docs/auto/github-access.md`, `docs/auto/copilot-cloud-setup.md`.
 
-[Unreleased]: https://github.com/Mpfk/auto/compare/v0.3.0...HEAD
+[Unreleased]: https://github.com/Mpfk/auto/compare/v0.4.0...HEAD
+[0.4.0]: https://github.com/Mpfk/auto/compare/v0.3.0...v0.4.0
 [0.3.0]: https://github.com/Mpfk/auto/compare/v0.2.0...v0.3.0
 [0.2.0]: https://github.com/Mpfk/auto/compare/v0.1.0...v0.2.0
 [0.1.0]: https://github.com/Mpfk/auto/releases/tag/v0.1.0
