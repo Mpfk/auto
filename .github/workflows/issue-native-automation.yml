@@ -46,13 +46,6 @@ jobs:
               });
             }
 
-            await github.rest.issues.createComment({
-              owner,
-              repo,
-              issue_number: issue.number,
-              body: `Issue is ready. Branch ready: ${branch}. Assign to Copilot 'develop' Agent to begin work.`
-            });
-
       - name: Move to in-progress when Copilot is assigned on ready issue
         if: github.event.action == 'assigned'
         uses: actions/github-script@v7
@@ -92,23 +85,6 @@ jobs:
               repo,
               issue_number: issue.number,
               labels: ['status/in-progress'],
-            });
-
-            await github.rest.issues.createComment({
-              owner,
-              repo,
-              issue_number: issue.number,
-              body: [
-                'Implementation kickoff:',
-                '',
-                `> **IMPORTANT — branch:** Preferred path is branch \`issue/${issue.number}\` (already created).`,
-                '> If your branch is not `issue/{number}` (for example `copilot/...`), include a valid issue-closing reference in the PR title/body (for example: `Closes #' + issue.number + '`, `Fixes #' + issue.number + '`, or `Resolves #' + issue.number + '`).',
-                '> Copilot `develop` agent is now the implementation worker for this issue.',
-                '',
-                '- Run TDD agent per independently testable task',
-                '- Keep docs updated in docs/',
-                '- Open PR from `issue/' + issue.number + '` to `main` when tasks are complete',
-              ].join('\n'),
             });
 
   comment-commands:
@@ -175,11 +151,5 @@ jobs:
                 repo,
                 issue_number: issue.number,
                 labels: ['status/ready'],
-              });
-              await github.rest.issues.createComment({
-                owner,
-                repo,
-                issue_number: issue.number,
-                body: `Gate 1 approved by @${actor}. Status moved to status/ready. Next step: assign to Copilot 'develop' Agent to begin work.`,
               });
             }
