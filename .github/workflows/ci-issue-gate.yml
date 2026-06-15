@@ -76,42 +76,9 @@ jobs:
               if (active !== 'status/in-progress') {
                 await setStatus('status/in-progress');
               }
-
-              const failedNames = failing.map((r) => `- ${r.name} (${r.conclusion || 'unknown'})`).join('\n');
-              await github.rest.issues.createComment({
-                owner,
-                repo,
-                issue_number,
-                body: [
-                  'Gate check failed: CI checks are not green. Status set to status/in-progress.',
-                  '',
-                  'Failed checks:',
-                  failedNames,
-                  '',
-                  `PR: #${pr.number}`,
-                  `Head SHA: ${pr.head.sha}`,
-                  '',
-                  'Next:',
-                  "- Re-invoke Copilot 'develop' Agent with the failure output and prior retrospective context.",
-                  '- Keep PR in draft until CI is green and review prerequisites are satisfied.',
-                ].join('\n'),
-              });
               return;
             }
 
             if (pr.draft && active === 'status/in-progress') {
               await setStatus('status/review');
-              await github.rest.issues.createComment({
-                owner,
-                repo,
-                issue_number,
-                body: [
-                  'Review kickoff: CI checks are green on the draft PR. Status moved to status/review.',
-                  '',
-                  'Next:',
-                  "- Invoke Copilot 'review' Agent and confirm PASS.",
-                  '- Keep PR as draft until Gate 2 prerequisites are satisfied.',
-                  '- After PASS, convert PR to ready-for-review and proceed to Gate 2 merge approval.',
-                ].join('\n'),
-              });
             }
