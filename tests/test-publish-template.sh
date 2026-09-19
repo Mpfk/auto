@@ -78,7 +78,11 @@ else
 fi
 
 # 5. Consumer scaffolding placeholders exist; framework dev tests do not.
-for keep in "bin/setup-hooks" "src/.gitkeep" "tests/.gitkeep" "workflow.conf" "CLAUDE.md"; do
+for keep in "bin/setup-hooks" "bin/auto-review-preflight" "src/.gitkeep" "tests/.gitkeep" \
+            "workflow.conf" "CLAUDE.md" "AGENTS.md" \
+            ".agents/skills/auto/SKILL.md" ".agents/skills/review/SKILL.md" \
+            "docs/auto/playbooks/core.md" "docs/auto/playbooks/review.md" \
+            ".github/codex/prompts/review.md" ".github/codex/schemas/review-result.json"; do
   if [[ -e "$SNAP/$keep" ]]; then
     pass "present in snapshot: $keep"
   else
@@ -86,6 +90,7 @@ for keep in "bin/setup-hooks" "src/.gitkeep" "tests/.gitkeep" "workflow.conf" "C
   fi
 done
 for devonly in "tests/workflow-config.sh" "tests/test-codeowners.sh" "tests/test-publish-template.sh" \
+               "tests/test-codex-support.sh" "tests/test-review-preflight.sh" "tests/test-codex-e2e.sh" \
                "docs/auto/release-process.md" "docs/auto/pilot-results.md"; do
   if [[ -e "$SNAP/$devonly" ]]; then
     fail "dev-only file leaked into snapshot: $devonly"
@@ -100,6 +105,13 @@ if grep -rIlE "$NEEDLES" "$SNAP" --exclude="CHANGELOG.md" 2>/dev/null | grep -q 
   fail "live sync-engine/token strings present: $(grep -rIlE "$NEEDLES" "$SNAP" --exclude=CHANGELOG.md | sed "s#$SNAP/##" | tr '\n' ' ')"
 else
   pass "no live sync-engine/token strings in snapshot (CHANGELOG exempt)"
+fi
+
+# 7. Codex Action is documented and asset-backed, but never enabled by default.
+if find "$SNAP/.github/workflows" -maxdepth 1 -type f -iname '*codex*' | grep -q .; then
+  fail "active Codex workflow leaked into the consumer snapshot"
+else
+  pass "no active Codex workflow or credential requirement in snapshot"
 fi
 
 echo ""
