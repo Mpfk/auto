@@ -1,0 +1,204 @@
+#!/usr/bin/env bash
+# Deterministic Gate 2 preflight for Auto reviews.
+
+set -u
+
+usage() {
+  cat <<'EOF'
+Usage: bin/auto-review-preflight --expected-head SHA [options]
+
+Options:
+  --base REF                 Base ref (default: origin/main, then main)
+  --head REF                 Reviewed ref (default: HEAD)
+  --expected-head SHA        Current PR head SHA; required
+  --ci-status STATUS         success, pending, failure, or auto (default: auto)
+  --provider PROVIDER        codex-native, codex-local, claude, or copilot
+  --native-status STATUS     completed, unavailable, error, or timeout
+  --local-review-pass        Confirm the local semantic fallback passed
+  --findings-file FILE       Lines: P0|open|URL, P1|resolved|URL, etc.
+  --test-command COMMAND     Override workflow.conf TEST_CMD
+  -h, --help                 Show this help
+EOF
+}
+
+die_usage() { echo "auto-review-preflight: $*" >&2; usage >&2; exit 2; }
+
+ROOT="$(git rev-parse --show-toplevel 2>/dev/null)" || die_usage "run inside a Git repository"
+if git -C "$ROOT" rev-parse --verify origin/main^{commit} >/dev/null 2>&1; then
+  BASE="origin/main"
+else
+  BASE="main"
+fi
+HEAD_REF="HEAD"
+EXPECTED_HEAD=""
+CI_STATUS="auto"
+PROVIDER="codex-local"
+NATIVE_STATUS="completed"
+LOCAL_REVIEW_PASS=0
+FINDINGS_FILE=""
+TEST_OVERRIDE=""
+
+while [[ $# -gt 0 ]]; do
+  case "$1" in
+    --base) BASE="${2:-}"; shift 2 ;;
+    --head) HEAD_REF="${2:-}"; shift 2 ;;
+    --expected-head) EXPECTED_HEAD="${2:-}"; shift 2 ;;
+    --ci-status) CI_STATUS="${2:-}"; shift 2 ;;
+    --provider) PROVIDER="${2:-}"; shift 2 ;;
+    --native-status) NATIVE_STATUS="${2:-}"; shift 2 ;;
+    --local-review-pass) LOCAL_REVIEW_PASS=1; shift ;;
+    --findings-file) FINDINGS_FILE="${2:-}"; shift 2 ;;
+    --test-command) TEST_OVERRIDE="${2:-}"; shift 2 ;;
+    -h|--help) usage; exit 0 ;;
+    *) die_usage "unknown argument: $1" ;;
+  esac
+done
+
+[[ -n "$EXPECTED_HEAD" ]] || die_usage "--expected-head is required"
+case "$PROVIDER" in codex-native|codex-local|claude|copilot) ;; *) die_usage "invalid provider: $PROVIDER" ;; esac
+case "$NATIVE_STATUS" in completed|unavailable|error|timeout) ;; *) die_usage "invalid native status: $NATIVE_STATUS" ;; esac
+case "$CI_STATUS" in success|pending|failure|auto) ;; *) die_usage "invalid CI status: $CI_STATUS" ;; esac
+[[ -z "$FINDINGS_FILE" || -f "$FINDINGS_FILE" ]] || die_usage "findings file not found: $FINDINGS_FILE"
+
+FAILURES=""
+FAIL_COUNT=0
+add_failure() {
+  FAIL_COUNT=$((FAIL_COUNT + 1))
+  FAILURES="${FAILURES}- $1
+"
+}
+
+HEAD_SHA="$(git -C "$ROOT" rev-parse "$HEAD_REF^{commit}" 2>/dev/null)" || die_usage "cannot resolve head: $HEAD_REF"
+git -C "$ROOT" rev-parse "$BASE^{commit}" >/dev/null 2>&1 || die_usage "cannot resolve base: $BASE"
+
+EXPECTED_RESOLVED="$EXPECTED_HEAD"
+if [[ ! "$EXPECTED_RESOLVED" =~ ^[0-9a-fA-F]{40}$ ]]; then
+  EXPECTED_RESOLVED="$(git -C "$ROOT" rev-parse "$EXPECTED_HEAD^{commit}" 2>/dev/null || printf '%s' "$EXPECTED_HEAD")"
+fi
+if [[ "$(printf '%s' "$HEAD_SHA" | tr 'A-F' 'a-f')" != "$(printf '%s' "$EXPECTED_RESOLVED" | tr 'A-F' 'a-f')" ]]; then
+  add_failure "Stale review head: expected $EXPECTED_RESOLVED but reviewed $HEAD_SHA."
+fi
+
+if [[ "$PROVIDER" == "codex-native" && "$NATIVE_STATUS" != "completed" ]]; then
+  if [[ "$LOCAL_REVIEW_PASS" -eq 1 ]]; then
+    PROVIDER="codex-local"
+  else
+    add_failure "Native Codex review ended with '$NATIVE_STATUS'; a passing local review fallback is required."
+  fi
+fi
+
+if [[ "$CI_STATUS" == "auto" ]]; then
+  if command -v gh >/dev/null 2>&1 && gh auth status >/dev/null 2>&1; then
+    CI_BUCKETS="$(gh pr checks "$HEAD_REF" --json bucket --jq '.[].bucket' 2>/dev/null || true)"
+    if [[ -z "$CI_BUCKETS" ]]; then
+      CI_STATUS="failure"
+      add_failure "CI status could not be read for $HEAD_REF."
+    elif printf '%s\n' "$CI_BUCKETS" | grep -qE '^(fail|cancel)$'; then
+      CI_STATUS="failure"
+    elif printf '%s\n' "$CI_BUCKETS" | grep -qE '^(pending)$'; then
+      CI_STATUS="pending"
+    else
+      CI_STATUS="success"
+    fi
+  else
+    CI_STATUS="failure"
+    add_failure "CI status is unavailable: authenticate gh or pass a verified host-tool result with --ci-status."
+  fi
+fi
+if [[ "$CI_STATUS" != "success" ]]; then
+  add_failure "CI is not green (status: $CI_STATUS)."
+fi
+
+COMMITS="$(git -C "$ROOT" log --reverse --format='%H%x09%s' "$BASE..$HEAD_REF")"
+if [[ -z "$COMMITS" ]]; then
+  add_failure "No commits exist between $BASE and $HEAD_REF."
+fi
+
+SEEN_TEST=0
+while IFS="$(printf '\t')" read -r commit subject; do
+  [[ -n "$commit" ]] || continue
+  if [[ ! "$subject" =~ ^(feat|fix|test|refactor|docs|chore)(\([a-zA-Z0-9._/-]+\))?!?:\ .+ ]]; then
+    add_failure "Conventional Commits violation: $subject"
+  fi
+
+  PATHS="$(git -C "$ROOT" diff-tree --no-commit-id --name-only -r "$commit")"
+  IS_TEST=0
+  IS_SOURCE=0
+  if [[ "$subject" =~ ^test(\(.+\))?!?:\  ]]; then IS_TEST=1; fi
+  for path in $PATHS; do
+    case "$path" in tests/*|test/*) IS_TEST=1 ;; esac
+    case "$path" in src/*|lib/*) IS_SOURCE=1 ;; esac
+  done
+  if [[ "$IS_TEST" -eq 1 ]]; then SEEN_TEST=1; fi
+  if [[ "$IS_SOURCE" -eq 1 && "$SEEN_TEST" -eq 0 ]]; then
+    add_failure "TDD ordering violation: source commit '$subject' has no earlier test commit."
+  fi
+done <<EOF
+$COMMITS
+EOF
+
+CHANGED_FILES="$(git -C "$ROOT" diff --name-only "$BASE..$HEAD_REF")"
+while IFS= read -r path; do
+  [[ "$path" == *.md ]] || continue
+  case "$path" in
+    docs/*|README.md|CLAUDE.md|AGENTS.md|CHANGELOG.md|.claude/*|.github/*|.agents/*) ;;
+    *) add_failure "Documentation placement violation: $path" ;;
+  esac
+done <<EOF
+$CHANGED_FILES
+EOF
+
+FINDING_LINKS="None"
+if [[ -n "$FINDINGS_FILE" ]]; then
+  LINKS="$(awk -F'|' 'NF >= 3 && $3 != "" { print $3 }' "$FINDINGS_FILE" | paste -sd ', ' -)"
+  [[ -n "$LINKS" ]] && FINDING_LINKS="$LINKS"
+  while IFS='|' read -r priority status link; do
+    case "$priority" in
+      P0|P1)
+        if [[ "$status" != "resolved" ]]; then
+          add_failure "Unresolved $priority finding${link:+: $link}"
+        fi
+        ;;
+    esac
+  done < "$FINDINGS_FILE"
+fi
+
+TEST_CMD=""
+if [[ -f "$ROOT/workflow.conf" ]]; then
+  # shellcheck disable=SC1091
+  source "$ROOT/workflow.conf"
+fi
+if [[ -n "$TEST_OVERRIDE" ]]; then TEST_CMD="$TEST_OVERRIDE"; fi
+if [[ -z "${TEST_CMD:-}" && -f "$ROOT/.githooks/lib/detect.sh" ]]; then
+  # shellcheck disable=SC1091
+  source "$ROOT/.githooks/lib/detect.sh"
+  detect_test_cmd >/dev/null 2>&1 || true
+fi
+if [[ -z "${TEST_CMD:-}" ]]; then
+  add_failure "Configured test suite is empty; set TEST_CMD in workflow.conf."
+elif ! (cd "$ROOT" && bash -c "$TEST_CMD"); then
+  add_failure "Configured test suite failed: $TEST_CMD"
+fi
+
+if [[ "$FAIL_COUNT" -gt 0 ]]; then
+  cat <<EOF
+## Review: FAIL
+- Provider: \`$PROVIDER\`
+- Reviewed head SHA: \`$HEAD_SHA\`
+- Preflight: \`FAIL\`
+- Finding links: $FINDING_LINKS
+
+### Failing checks
+$FAILURES
+EOF
+  exit 1
+fi
+
+cat <<EOF
+## Review: PASS
+- Provider: \`$PROVIDER\`
+- Reviewed head SHA: \`$HEAD_SHA\`
+- Preflight: \`PASS\`
+- Finding links: $FINDING_LINKS
+EOF
+

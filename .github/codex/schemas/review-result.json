@@ -1,0 +1,53 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "Auto Codex review result",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["verdict", "provider", "reviewed_head_sha", "findings"],
+  "properties": {
+    "verdict": {
+      "type": "string",
+      "enum": ["PASS", "FAIL"]
+    },
+    "provider": {
+      "type": "string",
+      "const": "codex-native"
+    },
+    "reviewed_head_sha": {
+      "type": "string",
+      "pattern": "^[0-9a-f]{40}$"
+    },
+    "summary": {
+      "type": "string"
+    },
+    "findings": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["priority", "status", "title", "location"],
+        "properties": {
+          "priority": {
+            "type": "string",
+            "enum": ["P0", "P1"]
+          },
+          "status": {
+            "type": "string",
+            "enum": ["open", "resolved"]
+          },
+          "title": {
+            "type": "string"
+          },
+          "location": {
+            "type": "string"
+          },
+          "url": {
+            "type": "string",
+            "format": "uri"
+          }
+        }
+      }
+    }
+  }
+}
+

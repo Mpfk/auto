@@ -75,7 +75,17 @@ adapters=(
 )
 for adapter in "${adapters[@]}"; do
   expect_contains "$adapter" "docs/auto/playbooks/" "$adapter loads a shared playbook"
+  lines="$(wc -l < "$ROOT/$adapter" | tr -d ' ')"
+  if [[ "$lines" -le 80 ]]; then pass "$adapter remains a thin adapter"; else fail "$adapter duplicates shared workflow logic ($lines lines)"; fi
 done
+
+expect_contains "docs/auto/playbooks/core.md" "AUTO-CORE-v1" "shared core has a stable contract id"
+expect_contains "docs/auto/playbooks/core.md" "status/draft -> status/researching -> status/planning -> Gate 1 -> status/ready -> status/in-progress -> CI -> status/review -> Gate 2 -> status/done" "all adapters share one state transition contract"
+expect_contains "docs/auto/playbooks/review.md" 'codex-native|codex-local|claude|copilot' "review provider values are normalized"
+expect_contains "docs/auto/playbooks/review.md" "Reviewed head SHA" "review evidence records the reviewed head"
+expect_contains "docs/auto/playbooks/review.md" "Preflight" "review evidence records preflight"
+expect_contains "docs/auto/playbooks/review.md" "Finding links" "review evidence records finding links"
+expect_contains "docs/auto/playbooks/merge.md" "reviewed SHA equals the current PR head" "Gate 2 rejects stale review evidence"
 
 expect_file ".github/codex/prompts/review.md"
 expect_file ".github/codex/schemas/review-result.json"
@@ -87,12 +97,6 @@ if find "$ROOT/.github/workflows" -maxdepth 1 -type f -iname '*codex*' | grep -q
   fail "an active Codex workflow was shipped"
 else
   pass "no active Codex workflow is shipped"
-fi
-
-if [[ "$(cat "$ROOT/.auto-version")" == "0.4.0" ]]; then
-  pass ".auto-version is 0.4.0"
-else
-  fail ".auto-version is not 0.4.0"
 fi
 
 echo

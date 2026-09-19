@@ -81,6 +81,7 @@ grep -qF 'Provider: `codex-local`' "$TMP/out" && pass "fallback is normalized to
 
 git -C "$REPO" switch -q main
 git -C "$REPO" switch -q -c issue/2
+mkdir -p "$REPO/src"
 printf '%s\n' 'untested=true' > "$REPO/src/untested.sh"
 git -C "$REPO" add src/untested.sh
 git -C "$REPO" commit -q -m "feat(core): add untested behavior"
@@ -108,4 +109,3 @@ run_fail "failed configured tests fail" "test suite" \
 echo
 echo "Results: $PASS passed, $FAIL failed"
 [[ $FAIL -eq 0 ]]
-

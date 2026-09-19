@@ -16,6 +16,10 @@ A one-time snapshot copy of the template into your new repository:
 - **Slash commands** — `.claude/commands/*.md`
 - **Git hooks** — `.githooks/` enforcement rules and shared lib
 - **Copilot agents** — `.github/agents/*.agent.md`
+- **Codex guidance and skills** — `AGENTS.md` and `.agents/skills/`
+- **Shared workflow contracts** — `docs/auto/playbooks/`
+- **Deterministic review tooling** — `bin/auto-review-preflight`
+- **Optional inert Codex Action assets** — `.github/codex/` (no active workflow or secret)
 - **GitHub config** — copilot instructions, issue template, PR template, labels
 - **Event-automation workflows** — GitHub Actions that drive the state machine
 - **A thin CI caller** — `.github/workflows/pr-checks.yml`, referencing Auto's reusable workflow by tag
@@ -46,7 +50,13 @@ Auto distinguishes two kinds of content:
 
 ### Instruction files — snapshot, updated manually
 
-Slash commands, agents, hooks, `CLAUDE.md`, and docs are a **point-in-time snapshot**. Nothing upstream overwrites them. To pick up a newer version, re-copy the files you want from `Mpfk/auto-template`. See [`UPGRADING.md`](UPGRADING.md).
+The shared playbooks, Codex skills, slash commands, agents, hooks, `AGENTS.md`,
+`CLAUDE.md`, and docs you received are a **point-in-time snapshot** taken when
+you clicked "Use this template". There is
+**no mechanism that auto-updates them** — by design. They are yours to edit, and
+nothing upstream will ever overwrite your local changes.
+To pick up a newer version, re-copy the files you want from
+`Mpfk/auto-template`. See [`UPGRADING.md`](UPGRADING.md).
 
 ### CI logic — updates automatically
 

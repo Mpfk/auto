@@ -1,158 +1,159 @@
 # Auto — Multi-Agent Software Development Framework
 
-> **[→ Start here: Use the template](https://github.com/Mpfk/auto-template)** — click **"Use this template"** to create a new repo with Auto pre-configured. *This repo is the framework source — don't clone it directly.*
+> **[→ Start here: Use the template](https://github.com/Mpfk/auto-template)** — click **"Use this template"** to create a repository with Auto pre-configured. *This repository is the framework source; consumers should use the template.*
 
-Auto turns a one-line request into a merged, tested, documented change. You describe what you need; a team of AI agents files a GitHub Issue, researches it, writes a plan, implements it test-first, reviews it, and merges it — pausing only at the gates you choose to control.
+Auto turns a request into a merged, tested, documented change. It files a
+GitHub Issue, researches the problem, writes a plan, implements it test-first,
+reviews it, and merges it—pausing only at the gates you choose to control.
 
-Runs in **Claude Code** (slash commands) and **GitHub Copilot** (chat agents). Every step is tracked in GitHub.
-
----
+It runs natively in **OpenAI Codex** (repository skills), **Claude Code** (slash
+commands), and **GitHub Copilot** (chat agents). Every step is tracked in GitHub.
 
 ## Quick start
 
-1. **[Use this template](https://github.com/Mpfk/auto-template)** → **"Create a new repository"**
-2. Edit **`workflow.conf`** — set `TEST_CMD` for your language (e.g. `npm test`, `pytest`, `go test ./...`)
-3. Run **`bin/setup-hooks`** to activate git hooks *(once per clone and once per worktree)*
-4. *(Copilot only)* Grant MCP write access — required one-time step per repo: [`docs/auto/copilot-cloud-setup.md`](docs/auto/copilot-cloud-setup.md)
+1. **[Use the template](https://github.com/Mpfk/auto-template)** and create a repository.
+2. Set `TEST_CMD` in **`workflow.conf`** for your project.
+3. Run **`bin/setup-hooks`** once per clone and worktree.
+4. Connect GitHub through authenticated `gh` or the GitHub tools provided by your agent host.
+5. For Copilot cloud, grant MCP write access using [`docs/auto/copilot-cloud-setup.md`](docs/auto/copilot-cloud-setup.md).
 
-Then open your first issue: `/auto Add a contact form`
-
----
+Then run `$auto` in Codex, `/auto` in Claude Code, or use the interactive
+issue/merge interface for your provider.
 
 ## How it works
 
-Every change flows through the same pipeline — tracked as a GitHub Issue, developed on its own branch, implemented test-first, and documented before it reaches `main`.
-
 ```mermaid
 flowchart LR
-    A([You describe what you need]) --> B[Create GitHub Issue]
-    B --> C[Research agents investigate in parallel]
-    C --> D[Synthesize findings + write plan]
-    D --> G1{Gate 1<br/>Plan approval}
-    G1 -- Approve --> E[Develop + Doc agents implement]
-    G1 -- Revise --> D
-    E --> CI{CI checks<br/>pass?}
-    CI -- Fail --> E
-    CI -- Pass --> F[Review agent validates]
-    F -- Issues found --> E
-    F -- PASS --> G2{Gate 2<br/>Merge approval}
+    A([Request]) --> B[GitHub Issue]
+    B --> C[Research + plan]
+    C --> G1{Gate 1}
+    G1 -- Approve --> D[Test-first implementation]
+    G1 -- Revise --> C
+    D --> CI{CI passes?}
+    CI -- No --> D
+    CI -- Yes --> R[Current-head review]
+    R -- Findings --> D
+    R -- PASS --> G2{Gate 2}
     G2 -- Approve --> M([Merge to main])
     G2 -- Reject --> C
-
-    style G1 fill:#ff6b6b,color:#fff,stroke:#c0392b
-    style G2 fill:#ff6b6b,color:#fff,stroke:#c0392b
-    style M fill:#2ecc71,color:#fff,stroke:#27ae60
 ```
 
-### The two gates
+`draft → researching → planning → [Gate 1] → ready → in-progress → [CI] → review → [Gate 2] → done`
 
-| You want… | Use | Behavior |
-|-----------|-----|----------|
-| Hands-off delivery | `/auto` | Self-approves both gates, drives straight to `main` — never pauses |
-| Control at each step | `/issue` then `/merge` | Stops at each gate for your Approve/Deny |
+The gates remain real in every mode. An explicit `$auto` or `/auto` invocation
+self-approves them only after their prerequisites hold. An ordinary
+implementation request uses interactive Gate 1 and Gate 2 behavior.
 
-```
-draft → researching → planning → [Gate 1] → ready → in-progress → [CI] → review → [Gate 2] → done
-```
+| You want | Codex | Claude Code | Behavior |
+|---|---|---|---|
+| Hands-off delivery | `$auto` | `/auto` | Drives through both gates after verification |
+| Control at each gate | `$issue`, then `$merge` | `/issue`, then `/merge` | Stops for approval |
 
----
+## Interfaces
 
-## Commands
+### OpenAI Codex — repository skills
+
+| Skill | Purpose |
+|---|---|
+| `$auto` | Drive the complete workflow to a verified merge |
+| `$issue` | Create/research an issue, plan, and present Gate 1 |
+| `$merge` | Validate current-head Gate 2 evidence, merge, and verify |
+| `$develop` | Implement one Red-Green-Refactor cycle |
+| `$review` | Run deterministic preflight and native-or-local review |
+| `$document` | Update documentation for completed work |
+| `$research` | Investigate one evidence-gathering strategy |
+
+Codex loads root `AGENTS.md` and discovers these workflows under
+`.agents/skills/`. No `.codex/config.toml`, plugin package, Action, or OpenAI
+secret is required. See [`docs/auto/codex-setup.md`](docs/auto/codex-setup.md).
 
 ### Claude Code — slash commands
 
 | Command | Purpose |
-|---------|---------|
-| `/auto` | **Drive the full workflow to merge** — fully autonomous, self-approves both gates |
-| `/issue` | Create issue, run parallel research, write plan, present Gate 1 |
-| `/merge` | Validate prerequisites, present Gate 2, merge, and verify |
-| `/develop` | One Red-Green-Refactor cycle |
-| `/review` | Pre-merge validation (TDD compliance, quality, tests, docs) |
-| `/document` | Update `docs/` for completed work |
-| `/research` | Single-strategy investigation (`codebase`, `docs`, `external`, `constraints`) |
+|---|---|
+| `/auto` | Drive the full workflow to verified merge |
+| `/issue` | Create/research an issue, plan, and present Gate 1 |
+| `/merge` | Validate Gate 2, merge, and verify |
+| `/develop` | Implement one Red-Green-Refactor cycle |
+| `/review` | Validate tests, quality, documentation, and review evidence |
+| `/document` | Maintain project documentation |
+| `/research` | Investigate one research strategy |
 
 ### GitHub Copilot — chat agents
 
 | Agent | Purpose |
-|-------|---------|
-| `@issue` | GitHub-native intake: research, planning, and Gate 1 |
-| `@orchestrate` | VS Code entry point: issue + research + plan |
-| `@develop` | Implements one component via TDD |
-| `@review` | Pre-merge validation (read-only) |
-| `@documentation` | Maintains `docs/` |
-| `@merge` | Gate 2 + merge: validate, merge, verify |
-
----
+|---|---|
+| `@issue` | GitHub-native intake, research, planning, and Gate 1 |
+| `@orchestrate` | VS Code entry point for issue, research, and planning |
+| `@develop` | Implement one component via TDD |
+| `@review` | Run pre-merge validation |
+| `@documentation` | Maintain documentation |
+| `@merge` | Validate Gate 2, merge, and verify |
 
 ## Core principles
 
-Enforced by git hooks and CI — not just conventions:
-
-- **Issue-first.** No code without a tracked GitHub Issue.
-- **Branch per issue.** All work on `issue/{number}`; never directly on `main`.
-- **Test-first (TDD).** Red → Green → Refactor. Tests written before implementation.
-- **Conventional Commits.** `type(scope): description`.
-- **Docs in `docs/`.** Keeps source trees clean.
-
----
+- **Issue-first.** Every change is tied to a GitHub Issue.
+- **Branch per issue.** Work happens on `issue/{number}`, never directly on `main`.
+- **Test-first.** Red → Green → Refactor.
+- **Conventional Commits.** Use `type(scope): description`.
+- **Provider-neutral contracts.** All three interfaces load `docs/auto/playbooks/`.
+- **Current-head evidence.** Gate 2 rejects stale review results.
+- **Verified merges.** Auto confirms the PR, issue, and `main` state after merging.
 
 ## Configuration
 
-**`workflow.conf`** is the only file you must edit — set `TEST_CMD` for your language. `SRC_DIRS`, `TEST_DIRS`, and `MAIN_BRANCH` are auto-detected from `package.json`, `pyproject.toml`, `go.mod`, `Cargo.toml`, etc.
+`workflow.conf` is the only project-specific file you must edit. Set `TEST_CMD`;
+source and test directories can be configured or auto-detected from common
+project manifests.
 
----
+## Distribution and updates
 
-## Distribution & updates
+| Repository | Role |
+|---|---|
+| [Mpfk/auto](https://github.com/Mpfk/auto) | Framework source and versioned reusable CI |
+| [Mpfk/auto-template](https://github.com/Mpfk/auto-template) | Consumer-ready snapshot used by “Use this template” |
 
-| Repo | Role |
-|------|------|
-| **[Mpfk/auto](https://github.com/Mpfk/auto)** | Framework source — developed and versioned here |
-| **[Mpfk/auto-template](https://github.com/Mpfk/auto-template)** | The template consumers instantiate |
-
-- **CI logic** updates automatically. Your `pr-checks.yml` references the reusable workflow by `@v1` tag. When Auto ships a release the tag moves and your repo picks up the updated CI on its next PR — no tokens, no action needed.
-- **Instruction files** (slash commands, agents, hooks, `CLAUDE.md`, docs) are a one-time snapshot you own. Update by re-copying files from the template. See [`docs/auto/UPGRADING.md`](docs/auto/UPGRADING.md).
-
----
+- **CI logic updates automatically.** The template calls the reusable workflow
+  at `@v1`, which moves with compatible releases.
+- **Instruction files are a snapshot.** Shared playbooks, `AGENTS.md`, Codex
+  skills/assets, Claude commands, Copilot agents, hooks, and docs are copied
+  once and remain owned by the consumer repository. See
+  [`docs/auto/UPGRADING.md`](docs/auto/UPGRADING.md).
 
 ## Developing the framework
 
-This section is for working on Auto's source — not for using Auto in a project.
+1. Clone this repository.
+2. Run `bin/setup-hooks`.
+3. Configure GitHub access for your provider.
+4. Use `$auto`/`/auto`, or the interactive `$issue`/`$merge` or `/issue`/`/merge` pair.
 
-1. Clone this repo
-2. `bin/setup-hooks`
-3. *(Copilot only)* Configure MCP write access: [`docs/auto/copilot-cloud-setup.md`](docs/auto/copilot-cloud-setup.md)
-4. Use `/auto`, or `/issue` + `/merge`, to develop
-
-Releases are signed semver tags. Moving `v1` to a new release rolls CI updates to every consumer repo automatically. See [`docs/auto/release-process.md`](docs/auto/release-process.md).
-
----
+Releases are signed SemVer tags. Moving `v1` to a compatible release rolls CI
+updates to consumers. See [`docs/auto/release-process.md`](docs/auto/release-process.md).
 
 ## Project structure
 
-```
-├── workflow.conf               # Test command, source/test directories, main branch
-├── CLAUDE.md                   # Claude Code project instructions (auto-loaded)
-├── .claude/
-│   ├── settings.json           # Project-scoped permissions and hooks
-│   └── commands/               # Slash command definitions (/issue, /auto, /develop, …)
-├── .github/
-│   ├── copilot-instructions.md # Workspace instructions (auto-loaded by Copilot)
-│   ├── agents/                 # Copilot agent definitions (.agent.md files)
-│   ├── workflows/              # GitHub Actions CI (reusable-pr-checks.yml + thin callers)
-│   └── ISSUE_TEMPLATE/         # Structured issue template
-├── .githooks/                  # Git hook enforcement (local dev)
-├── bin/setup-hooks             # Idempotent git-hook activation (worktree-safe)
-├── docs/                       # All project documentation
-├── src/                        # Source code
-└── tests/                      # Test files
+```text
+├── AGENTS.md                   # Codex repository guidance
+├── .agents/skills/             # Codex workflows
+├── CLAUDE.md                   # Claude Code adapter
+├── .claude/commands/           # Claude slash-command adapters
+├── .github/agents/             # Copilot agent adapters
+├── .github/codex/              # Optional Codex Action prompt/schema assets
+├── .github/workflows/          # Automation and reusable CI
+├── .githooks/                  # Local enforcement
+├── bin/auto-review-preflight   # Deterministic Gate 2 checks
+├── docs/auto/playbooks/        # Provider-neutral workflow contracts
+├── tests/                      # Framework tests
+└── workflow.conf               # Project-specific workflow configuration
 ```
 
----
+## Documentation
 
-## Docs
-
-- [`docs/auto/agent-flow.md`](docs/auto/agent-flow.md) — Complete workflow spec, state machine, and agent reference
-- [`docs/auto/auto-template-repo.md`](docs/auto/auto-template-repo.md) — Two-repo topology and distribution model
-- [`docs/auto/file-buckets.md`](docs/auto/file-buckets.md) — Snapshot vs reusable-workflow vs config files
-- [`docs/auto/copilot-cloud-setup.md`](docs/auto/copilot-cloud-setup.md) — Copilot MCP write access setup (required for Copilot users)
-- [`docs/auto/release-process.md`](docs/auto/release-process.md) — Cutting framework releases
+- [`docs/auto/agent-flow.md`](docs/auto/agent-flow.md) — state machine and gates
+- [`docs/auto/github-access.md`](docs/auto/github-access.md) — capability-based GitHub access
+- [`docs/auto/codex-setup.md`](docs/auto/codex-setup.md) — native Codex setup and review behavior
+- [`docs/auto/codex-github-action.md`](docs/auto/codex-github-action.md) — optional secure Codex Action recipe
+- [`docs/auto/auto-template-repo.md`](docs/auto/auto-template-repo.md) — distribution model
+- [`docs/auto/file-buckets.md`](docs/auto/file-buckets.md) — snapshot, reusable, and config files
+- [`docs/auto/copilot-cloud-setup.md`](docs/auto/copilot-cloud-setup.md) — Copilot MCP write access
+- [`docs/auto/release-process.md`](docs/auto/release-process.md) — signed release process
