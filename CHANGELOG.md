@@ -7,6 +7,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.4.0] - 2026-09-18
+
 ### Added
 
 - Native OpenAI Codex support through root `AGENTS.md` and seven repository skills under `.agents/skills/`.
@@ -85,7 +87,8 @@ First properly signed release. Supersedes the unsigned `v0.1.0` pilot tag.
 - Copilot agent definitions (`.github/agents/`) for GitHub-native orchestration.
 - Documentation: `docs/auto/agent-flow.md`, `docs/auto/github-access.md`, `docs/auto/copilot-cloud-setup.md`.
 
-[Unreleased]: https://github.com/Mpfk/auto/compare/v0.3.0...HEAD
+[Unreleased]: https://github.com/Mpfk/auto/compare/v0.4.0...HEAD
+[0.4.0]: https://github.com/Mpfk/auto/compare/v0.3.0...v0.4.0
 [0.3.0]: https://github.com/Mpfk/auto/compare/v0.2.0...v0.3.0
 [0.2.0]: https://github.com/Mpfk/auto/compare/v0.1.0...v0.2.0
 [0.1.0]: https://github.com/Mpfk/auto/releases/tag/v0.1.0
