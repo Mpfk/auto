@@ -79,6 +79,39 @@ if [[ "$(printf '%s' "$HEAD_SHA" | tr 'A-F' 'a-f')" != "$(printf '%s' "$EXPECTED
   add_failure "Stale review head: expected $EXPECTED_RESOLVED but reviewed $HEAD_SHA."
 fi
 
+WORKTREE_SHA="$(git -C "$ROOT" rev-parse HEAD^{commit} 2>/dev/null)" || die_usage "cannot resolve checked-out worktree HEAD"
+if [[ "$WORKTREE_SHA" != "$HEAD_SHA" ]]; then
+  add_failure "Reviewed ref $HEAD_SHA does not match checked-out worktree HEAD $WORKTREE_SHA; check out the reviewed head before running preflight."
+fi
+
+TEST_CMD=""
+SRC_DIRS=""
+TEST_DIRS=""
+if [[ -f "$ROOT/workflow.conf" ]]; then
+  # shellcheck disable=SC1091
+  source "$ROOT/workflow.conf"
+fi
+if [[ -n "$TEST_OVERRIDE" ]]; then TEST_CMD="$TEST_OVERRIDE"; fi
+if [[ -z "${TEST_CMD:-}" && -f "$ROOT/.githooks/lib/detect.sh" ]]; then
+  # shellcheck disable=SC1091
+  source "$ROOT/.githooks/lib/detect.sh"
+  detect_test_cmd >/dev/null 2>&1 || true
+fi
+SRC_DIRS="${SRC_DIRS:-src/ lib/}"
+TEST_DIRS="${TEST_DIRS:-tests/ test/}"
+
+path_in_dirs() {
+  local target="$1" dirs="$2" dir
+  for dir in $dirs; do
+    dir="${dir%/}"
+    [[ -n "$dir" ]] || continue
+    case "$target" in
+      "$dir"|"$dir"/*) return 0 ;;
+    esac
+  done
+  return 1
+}
+
 if [[ "$PROVIDER" == "codex-native" && "$NATIVE_STATUS" != "completed" ]]; then
   if [[ "$LOCAL_REVIEW_PASS" -eq 1 ]]; then
     PROVIDER="codex-local"
@@ -126,13 +159,13 @@ while IFS="$(printf '\t')" read -r commit subject; do
   IS_SOURCE=0
   if [[ "$subject" =~ ^test(\(.+\))?!?:\  ]]; then IS_TEST=1; fi
   for path in $PATHS; do
-    case "$path" in tests/*|test/*) IS_TEST=1 ;; esac
-    case "$path" in src/*|lib/*) IS_SOURCE=1 ;; esac
+    if path_in_dirs "$path" "$TEST_DIRS"; then IS_TEST=1; fi
+    if path_in_dirs "$path" "$SRC_DIRS"; then IS_SOURCE=1; fi
   done
-  if [[ "$IS_TEST" -eq 1 ]]; then SEEN_TEST=1; fi
   if [[ "$IS_SOURCE" -eq 1 && "$SEEN_TEST" -eq 0 ]]; then
     add_failure "TDD ordering violation: source commit '$subject' has no earlier test commit."
   fi
+  if [[ "$IS_TEST" -eq 1 ]]; then SEEN_TEST=1; fi
 done <<EOF
 $COMMITS
 EOF
@@ -163,17 +196,6 @@ if [[ -n "$FINDINGS_FILE" ]]; then
   done < "$FINDINGS_FILE"
 fi
 
-TEST_CMD=""
-if [[ -f "$ROOT/workflow.conf" ]]; then
-  # shellcheck disable=SC1091
-  source "$ROOT/workflow.conf"
-fi
-if [[ -n "$TEST_OVERRIDE" ]]; then TEST_CMD="$TEST_OVERRIDE"; fi
-if [[ -z "${TEST_CMD:-}" && -f "$ROOT/.githooks/lib/detect.sh" ]]; then
-  # shellcheck disable=SC1091
-  source "$ROOT/.githooks/lib/detect.sh"
-  detect_test_cmd >/dev/null 2>&1 || true
-fi
 if [[ -z "${TEST_CMD:-}" ]]; then
   add_failure "Configured test suite is empty; set TEST_CMD in workflow.conf."
 elif ! (cd "$ROOT" && bash -c "$TEST_CMD"); then
@@ -201,4 +223,3 @@ cat <<EOF
 - Preflight: \`PASS\`
 - Finding links: $FINDING_LINKS
 EOF
-
