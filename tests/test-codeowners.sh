@@ -50,6 +50,15 @@ if $SYNTAX_OK; then
   pass "CODEOWNERS syntax valid (every rule has pattern + owner)"
 fi
 
+# ── 5. Codex and shared workflow contracts are protected ───────────────────
+for pattern in '/AGENTS.md' '/.agents/' '/docs/auto/playbooks/' '/.github/codex/'; do
+  if grep -qE "^${pattern//\//\\/}\\s+@\\S+" "$CODEOWNERS" 2>/dev/null; then
+    pass "$pattern pattern present with at least one owner"
+  else
+    fail "$pattern pattern missing or has no owner"
+  fi
+done
+
 # ── Summary ───────────────────────────────────────────────────────────────────
 echo ""
 echo "Results: $PASS passed, $FAIL failed"

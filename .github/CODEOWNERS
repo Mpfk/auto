@@ -8,3 +8,9 @@
 
 # Git hooks — framework-owned; consumer extensions (100+) also live here
 /.githooks/       @Mpfk
+
+# Provider-neutral contracts and native Codex adapters
+/AGENTS.md         @Mpfk
+/.agents/          @Mpfk
+/docs/auto/playbooks/ @Mpfk
+/.github/codex/    @Mpfk

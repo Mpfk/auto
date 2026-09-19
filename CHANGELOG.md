@@ -9,7 +9,17 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Added
 
-- `bin/publish-template` — local maintainer tool that builds the consumer-form template snapshot (rewrites `pr-checks.yml` to the `@v1` caller, drops the hosted reusable workflow and dev-only files, adds `src/`/`tests/` placeholders) and pushes it to `Mpfk/auto-template`. Documented as release step 7. Deliberately not a CI workflow — that would require a PAT or cron.
+- Native OpenAI Codex support through root `AGENTS.md` and seven repository skills under `.agents/skills/`.
+- Provider-neutral workflow contracts in `docs/auto/playbooks/`, shared by Codex, Claude Code, and GitHub Copilot adapters.
+- Deterministic `bin/auto-review-preflight` validation and normalized current-head review evidence.
+- Optional, inactive Codex Action prompt/schema assets and a secure two-job recipe.
+- `bin/publish-template` — local maintainer tool that builds and publishes the consumer-form template snapshot.
+
+### Changed
+
+- Claude Code commands and Copilot agents are thin adapters over shared playbooks while retaining their existing entry points and provider-specific tool syntax.
+- GitHub access is capability-based: authenticated `gh` is preferred locally and host-provided GitHub tools are first-class fallbacks.
+- Template publishing, CODEOWNERS, documentation placement, upgrade guidance, and tests cover Codex and shared-core files.
 
 ## [0.3.0] - 2026-06-14
 

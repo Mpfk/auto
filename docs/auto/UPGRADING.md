@@ -173,6 +173,27 @@ Rules for migration step authoring:
 
 ## Release history
 
+### v0.4.0 (2026-09-18)
+
+Native OpenAI Codex support is a backward-compatible snapshot addition. Existing
+Claude Code and Copilot entry points keep their names and behavior.
+
+Consumers adopting Codex should re-copy these paths together:
+
+```text
+AGENTS.md
+.agents/
+docs/auto/playbooks/
+bin/auto-review-preflight
+.github/codex/
+docs/auto/codex-setup.md
+docs/auto/codex-github-action.md
+```
+
+Also re-copy `CLAUDE.md`, `.claude/commands/`, `.github/copilot-instructions.md`,
+and `.github/agents/` so all provider adapters reference the same shared core.
+No `.codex/config.toml`, plugin, active Action, or OpenAI secret is required.
+
 ### v0.1.0 (2026-06-13)
 
 This is the initial release of Auto. There are no previous versions to migrate

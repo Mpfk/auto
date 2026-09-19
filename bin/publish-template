@@ -91,7 +91,7 @@ name: PR Checks
 # for free, using only the default GITHUB_TOKEN. No sync engine, no token setup.
 #
 # To pin a specific release instead of tracking the major line, change @v1 to a
-# full version tag (e.g. @v0.3.0). A breaking change ships as @v2; you opt in by
+# full version tag (e.g. @v0.4.0). A breaking change ships as @v2; you opt in by
 # bumping the ref.
 #
 # The workflow name ("PR Checks") is load-bearing: ci-issue-gate.yml triggers on

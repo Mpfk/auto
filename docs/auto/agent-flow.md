@@ -2,9 +2,14 @@
 
 Auto is a structured software development workflow powered by specialized AI agents. Every piece of work is tracked as a GitHub Issue, developed on its own branch, implemented test-first, and documented before it reaches `main`.
 
-The **main conversation** (you + your AI assistant) coordinates the workflow. Agents are short-lived workers for specific phases — no single agent runs the entire lifecycle. The two gates remain the control points, but how they are exercised depends on which command you run: `/auto` self-approves both and runs end-to-end, while the standalone `/issue` and `/merge` commands present the gates interactively.
+The **main conversation** (you + your AI assistant) coordinates the workflow. Agents are short-lived workers for specific phases — no single agent runs the entire lifecycle. The two gates remain the control points. Explicit `$auto` in Codex or `/auto` in Claude Code self-approves both after their preconditions hold; ordinary implementation requests and the standalone issue/merge workflows keep the gates interactive.
 
 ## Execution Modes
+
+**OpenAI Codex** — root `AGENTS.md` supplies always-on policy and seven
+repository skills under `.agents/skills/` implement `$auto`, `$issue`, `$merge`,
+`$develop`, `$review`, `$document`, and `$research`. The skills work in desktop,
+CLI, IDE, and cloud and load the shared contracts in `docs/auto/playbooks/`.
 
 **Claude Code** — slash commands drive each phase.
 - `/auto` is **fully autonomous**: from any starting state it chains research → plan → implement → review → **merge** without pausing, self-approving Gate 1 and Gate 2. It is the default way to drive an issue to `main`.
@@ -89,7 +94,11 @@ flowchart TD
 
 ## Approval Gates
 
-Gates are decision points, not always human pauses. **`/auto` self-approves both** and runs straight through — autonomy removes the human *pause*, never the *quality bar* (a gate's preconditions must still hold). The standalone **`/issue`** and **`/merge`** commands present the same gates interactively, in Claude Code via the **Approve/Deny/Other selection UI** (Copilot agents keep a plain-text prompt).
+Gates are decision points, not always human pauses. Explicit **`$auto`** or
+**`/auto`** self-approves both and runs straight through — autonomy removes the
+human *pause*, never the *quality bar*. Ordinary implementation requests use
+interactive gates. Claude Code uses its Approve/Deny/Other UI; Codex and Copilot
+use the approval surface available in their host.
 
 ### Gate 1 — Plan Approval
 
@@ -109,8 +118,11 @@ Gates are decision points, not always human pauses. **`/auto` self-approves both
 
 **Prerequisites — all four required (enforced even under `/auto`):**
 1. Issue has `status/review` label
-2. Review Agent returned PASS
-3. CI checks are green on the PR **or** a "CI fallback" comment exists (GitHub Actions unavailable — agent self-ran tests locally)
+2. The latest normalized review record is PASS, its preflight is PASS, and its
+   reviewed head SHA matches the PR's current head
+3. CI checks are green on the PR **or** a documented CI fallback records that
+   the configured tests and commit validation passed locally because GitHub
+   Actions returned no checks
 4. The PR is mergeable (no conflicts with `main`)
 
 Only after all four are satisfied is the PR converted from draft to ready-for-review and Gate 2 presented (or, under `/auto`, the merge performed).
@@ -212,21 +224,25 @@ Branches follow the naming convention `issue/{issue-number}` (e.g. `issue/42`).
 
 ## Agents
 
-### Claude Code Slash Commands
+### Provider interfaces
 
-| Command | Purpose | Equivalent Copilot agent |
-|---------|---------|--------------------------|
-| `/issue` | Create issue, parallel research, plan, optional sub-issue split, Gate 1 (selection UI) | `@orchestrate` / `@issue` |
-| `/auto` | Auto-drive full workflow from current state to merge; fully autonomous (self-approves both gates) | *(new — no Copilot equivalent)* |
-| `/merge` | Validate prerequisites, present Gate 2 (selection UI), merge, verify success | `@merge` |
-| `/develop` | One Red-Green-Refactor cycle with retrospective | `@develop` |
-| `/document` | Maintain `docs/` | `@documentation` |
-| `/review` | Pre-merge validation | `@review` |
-| `/research` | Single-strategy investigation | `@research` |
+| Phase | Codex skill | Claude command | Copilot agent |
+|---|---|---|---|
+| Issue/plan | `$issue` | `/issue` | `@orchestrate` / `@issue` |
+| Autonomous progression | `$auto` | `/auto` | main conversation orchestration |
+| Merge | `$merge` | `/merge` | `@merge` |
+| Development | `$develop` | `/develop` | `@develop` |
+| Documentation | `$document` | `/document` | `@documentation` |
+| Review | `$review` | `/review` | `@review` |
+| Research | `$research` | `/research` | `@research` |
 
-**Config:** `.claude/commands/` | Requires Claude Code
+All interfaces load the same `docs/auto/playbooks/` phase contracts. Provider
+files retain only invocation, approval-UI, and tool syntax.
 
-The `/auto` command is unique to Claude Code: it reads the current `status/*` label on a given issue and drives all appropriate phases automatically — spawning research, develop, document, and review sub-agents as needed, then merging — **fully autonomously, without pausing at either gate**. When the issue is a parent with sub-issues, it fans out one `/auto` sub-agent per child. Human-in-the-loop gate review is available through the standalone `/issue` (Gate 1) and `/merge` (Gate 2) commands, which use the Approve/Deny selection UI. `gh` CLI is available in Claude Code (unlike Copilot cloud), so commands use it directly without MCP configuration.
+The autonomous interfaces read the current `status/*` label and resume
+idempotently. GitHub transport is capability-based: authenticated `gh` is
+preferred locally, with host-provided tools used whenever they supply the
+needed issue, PR, review, checks, or branch operation.
 
 ---
 
@@ -312,9 +328,14 @@ Maintains all documentation in `docs/`. Invoked in parallel with Develop Agents 
 
 Pre-merge quality gate. Read-only (~15–20 tool calls). Invoked only after CI is green on the draft PR.
 
-**Checks:** Conventional Commits format, TDD sequence (RED before GREEN in git log), code quality, test quality, docs updated, full test suite passes.
+**Checks:** `bin/auto-review-preflight` validates the current head, CI,
+Conventional Commits, TDD sequence, doc placement, findings, and configured test
+suite. Semantic review then covers correctness, security, regressions, test
+quality, docs, and acceptance criteria.
 
-**Output:** PASS (ready for Gate 2) or FAIL (specific issues listed).
+**Output:** A normalized PASS/FAIL issue comment with provider, reviewed SHA,
+preflight result, and finding links. Codex requests `@codex review` and falls
+back locally after an unavailable/error/five-minute-timeout result.
 
 **Config:** `.github/agents/review.agent.md` | Model: Claude Opus 4 | Cannot modify files.
 
@@ -386,7 +407,7 @@ Uses a **dispatcher pattern** — each hook type runs all scripts in its `.d/` s
 | Hook | Enforces |
 |------|----------|
 | Branch Guard | Blocks direct commits to `main` |
-| Doc Placement Guard | Blocks new `.md` files outside `docs/` (except `README.md` and `.github/`) |
+| Doc Placement Guard | Blocks new `.md` files outside `docs/` and the approved root/provider policy locations |
 | TDD Cycle Guard | On issue branches, blocks source-only commits if no test commits exist yet |
 
 ### Commit-Msg

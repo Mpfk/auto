@@ -284,7 +284,18 @@ else
   pass "no $NEEDLE reference in tracked files"
 fi
 
-# --- 14. bin/publish-template builds a correct consumer template snapshot (#143) ---
+# --- 14. Native Codex contracts and deterministic review preflight (#155) ---
+echo ""
+echo "--- Running native Codex support tests ---"
+for codex_test in test-codex-support.sh test-review-preflight.sh test-codex-e2e.sh; do
+  if bash "$ROOT/tests/$codex_test"; then
+    pass "$codex_test passes"
+  else
+    fail "$codex_test failed (see output above)"
+  fi
+done
+
+# --- 15. bin/publish-template builds a correct consumer template snapshot (#143) ---
 echo ""
 echo "--- Running publish-template snapshot test ---"
 if bash "$ROOT/tests/test-publish-template.sh"; then

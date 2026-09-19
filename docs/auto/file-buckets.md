@@ -24,6 +24,12 @@ freely. To pick up newer upstream versions you re-copy by hand (see
 
 | Path | Notes |
 |------|-------|
+| `AGENTS.md` | Codex repository rules and native review policy |
+| `.agents/skills/*/SKILL.md` | Seven Codex workflow skills |
+| `docs/auto/playbooks/*.md` | Provider-neutral workflow contracts used by every adapter |
+| `.github/codex/prompts/review.md` | Optional Codex Action review prompt asset |
+| `.github/codex/schemas/review-result.json` | Optional Codex Action output schema |
+| `bin/auto-review-preflight` | Deterministic current-head Gate 2 checks |
 | `.claude/commands/auto.md` | Core slash command |
 | `.claude/commands/develop.md` | Core slash command |
 | `.claude/commands/document.md` | Core slash command |
@@ -112,6 +118,17 @@ snapshot model it is copied once and then belongs to you: add project-specific
 scopes, local overrides, and team conventions freely. Nothing upstream rewrites
 it. If you want a newer framework block, re-copy the relevant section from the
 template by hand.
+
+### `AGENTS.md`, `.agents/`, and shared playbooks
+
+Codex loads `AGENTS.md` automatically and discovers repository skills under
+`.agents/skills/`. Each skill is intentionally thin and loads the same
+`docs/auto/playbooks/` contract used by Claude Code and Copilot. These files are
+one consumer-owned snapshot: update them together so adapters do not drift from
+the shared core.
+
+The `.github/codex/` prompt and schema are inert assets. No Codex workflow or
+OpenAI credential is enabled by the template.
 
 ### `.claude/settings.json` — seeded, then yours
 

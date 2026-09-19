@@ -172,8 +172,10 @@ bin/publish-template --push
 ```
 
 `publish-template` rebuilds the consumer form (rewrites `pr-checks.yml` to the
-`@v1` caller, drops the hosted reusable workflow and dev-only files, adds the
-`src/`/`tests/` placeholders) and pushes with **your** git credentials. It is a
+`@v1` caller, includes `AGENTS.md`, `.agents/`, shared playbooks, the review
+preflight, and inert Codex assets, drops the hosted reusable workflow and
+dev-only files, and adds the `src/`/`tests/` placeholders) and pushes with
+**your** git credentials. It is a
 local maintainer tool by design — not a CI workflow — because `GITHUB_TOKEN`
 cannot push across repos or modify `.github/workflows/**`, so a CI version would
 require a PAT or a cron. If the template is already current it reports "nothing
@@ -189,6 +191,8 @@ After the tags are pushed, confirm:
 3. `cat .auto-version` on `main` reads the new version.
 4. `CHANGELOG.md` has the new version section with today's date and a non-empty
    entry.
+5. A consumer snapshot preview contains the Codex/shared-core paths and no
+   active Codex workflow or OpenAI credential requirement.
 
 ## Breaking changes
 
