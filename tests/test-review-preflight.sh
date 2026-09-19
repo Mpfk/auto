@@ -89,6 +89,47 @@ UNT_HEAD="$(git -C "$REPO" rev-parse HEAD)"
 run_fail "TDD ordering violation fails" "TDD" \
   --base main --expected-head "$UNT_HEAD" --ci-status success
 
+# Reviewing a ref that is not checked out must not run the current worktree's
+# workflow.conf and tests while certifying another SHA.
+git -C "$REPO" switch -q main
+git -C "$REPO" switch -q -c issue/not-checked-out
+mkdir -p "$REPO/src"
+printf '%s\n' 'broken=true' > "$REPO/src/broken.sh"
+git -C "$REPO" add src/broken.sh
+git -C "$REPO" commit -q -m "feat(core): add broken behavior"
+OTHER_HEAD="$(git -C "$REPO" rev-parse HEAD)"
+git -C "$REPO" switch -q main
+run_fail "non-checked-out reviewed ref fails" "worktree" \
+  --base main --head issue/not-checked-out --expected-head "$OTHER_HEAD" --ci-status success
+
+# Project-specific source and test roots must drive TDD ordering checks.
+mkdir -p "$REPO/app" "$REPO/spec"
+printf '%s\n' '#!/usr/bin/env bash' 'exit 0' > "$REPO/spec/pass.sh"
+chmod +x "$REPO/spec/pass.sh"
+printf '%s\n' 'TEST_CMD="bash spec/pass.sh"' 'SRC_DIRS="app/"' 'TEST_DIRS="spec/"' 'MAIN_BRANCH="main"' > "$REPO/workflow.conf"
+git -C "$REPO" add workflow.conf spec/pass.sh
+git -C "$REPO" commit -q -m "chore: configure custom project roots"
+
+git -C "$REPO" switch -q -c issue/custom-roots
+printf '%s\n' 'untested=true' > "$REPO/app/untested.sh"
+git -C "$REPO" add app/untested.sh
+git -C "$REPO" commit -q -m "feat(core): add untested custom-root behavior"
+CUSTOM_HEAD="$(git -C "$REPO" rev-parse HEAD)"
+run_fail "configured source directories enforce TDD" "TDD" \
+  --base main --expected-head "$CUSTOM_HEAD" --ci-status success
+
+# A test and its implementation in one commit is not Red-Green ordering.
+git -C "$REPO" switch -q main
+git -C "$REPO" switch -q -c issue/combined-red-green
+mkdir -p "$REPO/app" "$REPO/spec"
+printf '%s\n' '# combined test' > "$REPO/spec/combined.sh"
+printf '%s\n' 'implemented=true' > "$REPO/app/combined.sh"
+git -C "$REPO" add spec/combined.sh app/combined.sh
+git -C "$REPO" commit -q -m "feat(core): combine test and implementation"
+COMBINED_HEAD="$(git -C "$REPO" rev-parse HEAD)"
+run_fail "combined test and source commit fails TDD" "TDD" \
+  --base main --expected-head "$COMBINED_HEAD" --ci-status success
+
 printf '%s\n' '# misplaced' > "$REPO/NOTES.md"
 git -C "$REPO" add NOTES.md
 git -C "$REPO" commit -q -m "docs: add misplaced notes"
@@ -101,7 +142,7 @@ BAD_HEAD="$(git -C "$REPO" rev-parse HEAD)"
 run_fail "non-conventional commit fails" "Conventional" \
   --base main --expected-head "$BAD_HEAD" --ci-status success
 
-sed -i.bak 's#bash tests/pass.sh#false#' "$REPO/workflow.conf"
+sed -i.bak 's#^TEST_CMD=.*#TEST_CMD="false"#' "$REPO/workflow.conf"
 rm -f "$REPO/workflow.conf.bak"
 run_fail "failed configured tests fail" "test suite" \
   --base main --expected-head "$BAD_HEAD" --ci-status success
